@@ -10,6 +10,8 @@ django==5.2.16
     # via
     #   -r requirements/base.in
     #   djangorestframework
+django-environ==0.13.0
+    # via -r requirements/base.in
 djangorestframework==3.16.1
     # via -r requirements/base.in
 sqlparse==0.5.5
