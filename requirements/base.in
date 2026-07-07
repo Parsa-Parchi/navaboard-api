@@ -1,0 +1,4 @@
+# Core runtime dependencies
+
+Django~=5.2.0
+djangorestframework~=3.16.0
