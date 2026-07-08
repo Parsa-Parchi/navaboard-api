@@ -4,17 +4,19 @@ from typing import Any
 
 from django.contrib.auth.base_user import BaseUserManager
 
+from .phone_numbers import normalize_iranian_mobile_number
+
+
+
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
     @staticmethod
     def _normalize_phone_number(phone_number: str | None) -> str | None:
-        if phone_number is None:
-            return None
+        return normalize_iranian_mobile_number(phone_number)
 
-        normalized_phone_number = phone_number.strip()
-        return normalized_phone_number or None
+
 
     def _normalize_email_address(self, email: str | None) -> str | None:
         if email is None:

@@ -31,10 +31,17 @@ class UserManagerTests(TestCase):
         with self.assertRaises(ValueError):
             User.objects.create_user()
 
+    def test_normalizes_phone_number_before_creating_user(self):
+        user = User.objects.create_user(
+            phone_number="09121234567",
+        )
+
+        self.assertEqual(user.phone_number, "+989121234567")
+
     def test_rejects_invalid_iranian_phone_number(self):
         with self.assertRaises(ValidationError):
             User.objects.create_user(
-                phone_number="09121234567",
+                phone_number="02112345678",
             )
 
     def test_rejects_case_insensitive_duplicate_email(self):
