@@ -30,3 +30,50 @@ class OTPRequestResponseSerializer(serializers.Serializer):
     development_otp_code = serializers.CharField(
         required=False,
     )
+
+class OTPVerificationSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(
+        max_length=32,
+        write_only=True,
+    )
+    code = serializers.CharField(
+        max_length=6,
+        write_only=True,
+    )
+    purpose = serializers.ChoiceField(
+        choices=OTPChallenge.Purpose.choices,
+        default=OTPChallenge.Purpose.LOGIN,
+        write_only=True,
+    )
+
+    def validate_phone_number(self, value: str) -> str:
+        normalized_phone_number = normalize_iranian_mobile_number(value)
+
+        if normalized_phone_number is None:
+            raise serializers.ValidationError("Phone number is required.")
+
+        return normalized_phone_number
+
+    def validate_code(self, value: str) -> str:
+        normalized_code = value.strip()
+
+        if len(normalized_code) != 6 or not normalized_code.isdigit():
+            raise serializers.ValidationError("OTP code must be a 6-digit number.")
+
+        return normalized_code
+
+
+class AuthenticatedUserSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    phone_number = serializers.CharField(allow_null=True)
+    email = serializers.EmailField(allow_null=True)
+    full_name = serializers.CharField()
+    is_phone_verified = serializers.BooleanField()
+
+
+class OTPVerificationResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    token_type = serializers.CharField()
+    user_created = serializers.BooleanField()
+    user = AuthenticatedUserSerializer()
