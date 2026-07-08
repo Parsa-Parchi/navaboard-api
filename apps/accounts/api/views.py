@@ -6,10 +6,18 @@ from rest_framework.views import APIView
 from apps.accounts.api.serializers import (
     OTPRequestResponseSerializer,
     OTPRequestSerializer,
+    OTPVerificationResponseSerializer,
+    OTPVerificationSerializer,
 )
-from apps.accounts.services.otp import create_otp_challenge
+from apps.accounts.services.otp import create_otp_challenge, verify_otp_challenge
+from apps.accounts.services.tokens import issue_auth_token_pair
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
+
+
 
 class OTPRequestAPIView(APIView):
     permission_classes = [AllowAny]
@@ -51,3 +59,46 @@ class OTPRequestAPIView(APIView):
             return forwarded_for.split(",", maxsplit=1)[0].strip()
 
         return request.META.get("REMOTE_ADDR")
+
+
+class OTPVerificationAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = OTPVerificationSerializer
+
+    @extend_schema(
+        request=OTPVerificationSerializer,
+        responses={
+            status.HTTP_200_OK: OTPVerificationResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            verification_result = verify_otp_challenge(
+                phone_number=serializer.validated_data["phone_number"],
+                plain_code=serializer.validated_data["code"],
+                purpose=serializer.validated_data["purpose"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        token_pair = issue_auth_token_pair(verification_result.user)
+
+        response_data = {
+            "access": token_pair.access,
+            "refresh": token_pair.refresh,
+            "token_type": "Bearer",
+            "user_created": verification_result.user_created,
+            "user": {
+                "id": verification_result.user.id,
+                "phone_number": verification_result.user.phone_number,
+                "email": verification_result.user.email,
+                "full_name": verification_result.user.full_name,
+                "is_phone_verified": verification_result.user.is_phone_verified,
+            },
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)

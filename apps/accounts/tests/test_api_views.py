@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import OTPChallenge
-from apps.accounts.services.otp import check_otp_code
+from apps.accounts.services.otp import check_otp_code, create_otp_challenge
 from django.test import override_settings
 
 
@@ -93,3 +93,98 @@ class OTPRequestAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("expires_at", response.data)
         self.assertNotIn("development_otp_code", response.data)
+
+
+class OTPVerificationAPIViewTests(APITestCase):
+    def test_verifies_otp_and_returns_tokens_for_new_user(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        url = reverse("accounts-api:otp-verify")
+
+        response = self.client.post(
+            url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["token_type"], "Bearer")
+        self.assertTrue(response.data["user_created"])
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+
+        user_data = response.data["user"]
+        self.assertEqual(user_data["phone_number"], "+989121234567")
+        self.assertTrue(user_data["is_phone_verified"])
+
+        request_result.challenge.refresh_from_db()
+        self.assertIsNotNone(request_result.challenge.used_at)
+
+    def test_verifies_otp_and_returns_existing_user(self):
+        first_request_result = create_otp_challenge(phone_number="09121234567")
+        url = reverse("accounts-api:otp-verify")
+
+        first_response = self.client.post(
+            url,
+            data={
+                "phone_number": "09121234567",
+                "code": first_request_result.plain_code,
+            },
+            format="json",
+        )
+
+        second_request_result = create_otp_challenge(phone_number="09121234567")
+
+        second_response = self.client.post(
+            url,
+            data={
+                "phone_number": "+989121234567",
+                "code": second_request_result.plain_code,
+            },
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(first_response.data["user_created"])
+        self.assertFalse(second_response.data["user_created"])
+        self.assertEqual(
+            first_response.data["user"]["id"],
+            second_response.data["user"]["id"],
+        )
+
+    def test_rejects_invalid_otp_code(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        invalid_code = (
+            "000000"
+            if request_result.plain_code != "000000"
+            else "111111"
+        )
+        url = reverse("accounts-api:otp-verify")
+
+        response = self.client.post(
+            url,
+            data={
+                "phone_number": "09121234567",
+                "code": invalid_code,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_missing_active_challenge(self):
+        url = reverse("accounts-api:otp-verify")
+
+        response = self.client.post(
+            url,
+            data={
+                "phone_number": "09121234567",
+                "code": "123456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
