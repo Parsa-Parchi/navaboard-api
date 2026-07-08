@@ -22,3 +22,11 @@ class OTPRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError("Phone number is required.")
 
         return normalized_phone_number
+
+
+class OTPRequestResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+    development_otp_code = serializers.CharField(
+        required=False,
+    )

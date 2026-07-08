@@ -3,13 +3,25 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.api.serializers import OTPRequestSerializer
+from apps.accounts.api.serializers import (
+    OTPRequestResponseSerializer,
+    OTPRequestSerializer,
+)
 from apps.accounts.services.otp import create_otp_challenge
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
 
 class OTPRequestAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = OTPRequestSerializer
+
+    @extend_schema(
+        request=OTPRequestSerializer,
+        responses={
+            status.HTTP_201_CREATED: OTPRequestResponseSerializer,
+        },
+        tags=["auth"],
+    )
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
