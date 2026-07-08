@@ -8,7 +8,9 @@ from apps.accounts.services.otp import (
     create_otp_challenge,
     generate_numeric_otp_code,
     hash_otp_code,
+    verify_otp_challenge,
 )
+from datetime import timedelta
 
 
 class OTPServiceTests(TestCase):
@@ -79,3 +81,124 @@ class OTPServiceTests(TestCase):
     def test_rejects_missing_phone_number(self):
         with self.assertRaises(ValidationError):
             create_otp_challenge(phone_number="")
+
+
+    def test_verifies_otp_and_creates_user_for_new_phone_number(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+
+        verification_result = verify_otp_challenge(
+            phone_number="+989121234567",
+            plain_code=request_result.plain_code,
+        )
+
+        request_result.challenge.refresh_from_db()
+
+        self.assertTrue(verification_result.user_created)
+        self.assertEqual(verification_result.user.phone_number, "+989121234567")
+        self.assertTrue(verification_result.user.is_phone_verified)
+        self.assertIsNotNone(request_result.challenge.used_at)
+
+    def test_verifies_otp_and_uses_existing_user(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+
+        first_verification_result = verify_otp_challenge(
+            phone_number="09121234567",
+            plain_code=request_result.plain_code,
+        )
+
+        second_request_result = create_otp_challenge(phone_number="09121234567")
+
+        second_verification_result = verify_otp_challenge(
+            phone_number="09121234567",
+            plain_code=second_request_result.plain_code,
+        )
+
+        self.assertTrue(first_verification_result.user_created)
+        self.assertFalse(second_verification_result.user_created)
+        self.assertEqual(
+            first_verification_result.user.id,
+            second_verification_result.user.id,
+        )
+
+    def test_marks_existing_user_phone_as_verified(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+
+        verification_result = verify_otp_challenge(
+            phone_number="09121234567",
+            plain_code=request_result.plain_code,
+        )
+
+        user = verification_result.user
+        user.is_phone_verified = False
+        user.save(update_fields=["is_phone_verified"])
+
+        second_request_result = create_otp_challenge(phone_number="09121234567")
+
+        second_verification_result = verify_otp_challenge(
+            phone_number="09121234567",
+            plain_code=second_request_result.plain_code,
+        )
+
+        second_verification_result.user.refresh_from_db()
+
+        self.assertFalse(second_verification_result.user_created)
+        self.assertTrue(second_verification_result.user.is_phone_verified)
+
+    def test_rejects_invalid_otp_code_and_increments_attempts_count(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        invalid_code = (
+            "000000"
+            if request_result.plain_code != "000000"
+            else "111111"
+        )
+
+        with self.assertRaises(ValidationError):
+            verify_otp_challenge(
+                phone_number="09121234567",
+                plain_code=invalid_code,
+            )
+
+        request_result.challenge.refresh_from_db()
+
+        self.assertEqual(request_result.challenge.attempts_count, 1)
+        self.assertIsNone(request_result.challenge.used_at)
+
+
+    def test_rejects_expired_otp_challenge(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        request_result.challenge.expires_at = timezone.now() - timedelta(seconds=1)
+        request_result.challenge.save(update_fields=["expires_at"])
+
+        with self.assertRaises(ValidationError):
+            verify_otp_challenge(
+                phone_number="09121234567",
+                plain_code=request_result.plain_code,
+            )
+
+    def test_rejects_otp_challenge_without_remaining_attempts(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        request_result.challenge.attempts_count = 5
+        request_result.challenge.max_attempts = 5
+        request_result.challenge.save(update_fields=["attempts_count", "max_attempts"])
+
+        with self.assertRaises(ValidationError):
+            verify_otp_challenge(
+                phone_number="09121234567",
+                plain_code=request_result.plain_code,
+            )
+
+    def test_rejects_when_no_active_otp_challenge_exists(self):
+        with self.assertRaises(ValidationError):
+            verify_otp_challenge(
+                phone_number="09121234567",
+                plain_code="123456",
+            )
+
+    def test_rejects_missing_otp_code(self):
+        create_otp_challenge(phone_number="09121234567")
+
+        with self.assertRaises(ValidationError):
+            verify_otp_challenge(
+                phone_number="09121234567",
+                plain_code="   ",
+            )
