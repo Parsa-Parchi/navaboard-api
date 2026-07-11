@@ -188,3 +188,87 @@ class OTPVerificationAPIViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class AuthSessionAPIViewTests(APITestCase):
+    def test_refreshes_auth_tokens(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        verify_url = reverse("accounts-api:otp-verify")
+        refresh_url = reverse("accounts-api:token-refresh")
+
+        verify_response = self.client.post(
+            verify_url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            refresh_url,
+            data={
+                "refresh": verify_response.data["refresh"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["token_type"], "Bearer")
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+        self.assertNotEqual(
+            response.data["refresh"],
+            verify_response.data["refresh"],
+        )
+
+    def test_rejects_invalid_refresh_token(self):
+        url = reverse("accounts-api:token-refresh")
+
+        response = self.client.post(
+            url,
+            data={
+                "refresh": "invalid-refresh-token",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_logs_out_by_blacklisting_refresh_token(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        verify_url = reverse("accounts-api:otp-verify")
+        logout_url = reverse("accounts-api:logout")
+        refresh_url = reverse("accounts-api:token-refresh")
+
+        verify_response = self.client.post(
+            verify_url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        logout_response = self.client.post(
+            logout_url,
+            data={
+                "refresh": verify_response.data["refresh"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(logout_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            logout_response.data["detail"],
+            "Logged out successfully.",
+        )
+
+        refresh_response = self.client.post(
+            refresh_url,
+            data={
+                "refresh": verify_response.data["refresh"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(refresh_response.status_code, status.HTTP_400_BAD_REQUEST)

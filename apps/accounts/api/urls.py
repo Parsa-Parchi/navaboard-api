@@ -1,7 +1,11 @@
 from django.urls import path
 
-from apps.accounts.api.views import OTPRequestAPIView, OTPVerificationAPIView
-
+from apps.accounts.api.views import (
+    LogoutAPIView,
+    OTPRequestAPIView,
+    OTPVerificationAPIView,
+    TokenRefreshAPIView,
+)
 
 app_name = "accounts-api"
 
@@ -16,5 +20,16 @@ urlpatterns = [
         "auth/otp/verify/",
         OTPVerificationAPIView.as_view(),
         name="otp-verify",
+    ),
+
+    path(
+        "auth/token/refresh/",
+        TokenRefreshAPIView.as_view(),
+        name="token-refresh",
+    ),
+    path(
+        "auth/logout/",
+        LogoutAPIView.as_view(),
+        name="logout",
     ),
 ]
