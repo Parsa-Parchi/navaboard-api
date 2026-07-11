@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.api.serializers import (
+    CurrentUserProfileSerializer,
     LogoutRequestSerializer,
     LogoutResponseSerializer,
     OTPRequestResponseSerializer,
@@ -167,3 +168,35 @@ class LogoutAPIView(APIView):
             {"detail": "Logged out successfully."},
             status=status.HTTP_200_OK,
         )
+
+class CurrentUserProfileAPIView(APIView):
+    serializer_class = CurrentUserProfileSerializer
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: CurrentUserProfileSerializer,
+        },
+        tags=["auth"],
+    )
+    def get(self, request):
+        serializer = self.serializer_class(request.user)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        request=CurrentUserProfileSerializer,
+        responses={
+            status.HTTP_200_OK: CurrentUserProfileSerializer,
+        },
+        tags=["auth"],
+    )
+    def patch(self, request):
+        serializer = self.serializer_class(
+            instance=request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
