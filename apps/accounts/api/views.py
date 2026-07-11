@@ -4,13 +4,22 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.api.serializers import (
+    LogoutRequestSerializer,
+    LogoutResponseSerializer,
     OTPRequestResponseSerializer,
     OTPRequestSerializer,
     OTPVerificationResponseSerializer,
     OTPVerificationSerializer,
+    TokenRefreshRequestSerializer,
+    TokenRefreshResponseSerializer,
 )
 from apps.accounts.services.otp import create_otp_challenge, verify_otp_challenge
-from apps.accounts.services.tokens import issue_auth_token_pair
+from apps.accounts.services.tokens import (
+    blacklist_refresh_token,
+    issue_auth_token_pair,
+    refresh_auth_token_pair,
+)
+
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 
@@ -102,3 +111,59 @@ class OTPVerificationAPIView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+class TokenRefreshAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = TokenRefreshRequestSerializer
+
+    @extend_schema(
+        request=TokenRefreshRequestSerializer,
+        responses={
+            status.HTTP_200_OK: TokenRefreshResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            token_pair = refresh_auth_token_pair(
+                serializer.validated_data["refresh"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        response_data = {
+            "access": token_pair.access,
+            "refresh": token_pair.refresh,
+            "token_type": "Bearer",
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class LogoutAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = LogoutRequestSerializer
+
+    @extend_schema(
+        request=LogoutRequestSerializer,
+        responses={
+            status.HTTP_200_OK: LogoutResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            blacklist_refresh_token(serializer.validated_data["refresh"])
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        return Response(
+            {"detail": "Logged out successfully."},
+            status=status.HTTP_200_OK,
+        )
