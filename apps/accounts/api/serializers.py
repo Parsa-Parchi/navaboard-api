@@ -2,7 +2,9 @@ from rest_framework import serializers
 
 from apps.accounts.models import OTPChallenge
 from apps.accounts.phone_numbers import normalize_iranian_mobile_number
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class OTPRequestSerializer(serializers.Serializer):
     phone_number = serializers.CharField(
@@ -98,3 +100,29 @@ class LogoutRequestSerializer(serializers.Serializer):
 
 class LogoutResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
+
+class CurrentUserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "phone_number",
+            "email",
+            "full_name",
+            "is_phone_verified",
+            "is_email_verified",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "phone_number",
+            "email",
+            "is_phone_verified",
+            "is_email_verified",
+            "created_at",
+            "updated_at",
+        )
+
+    def validate_full_name(self, value: str) -> str:
+        return value.strip()
