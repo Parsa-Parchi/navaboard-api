@@ -272,3 +272,101 @@ class AuthSessionAPIViewTests(APITestCase):
         )
 
         self.assertEqual(refresh_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class CurrentUserProfileAPIViewTests(APITestCase):
+    def test_rejects_unauthenticated_request(self):
+        url = reverse("accounts-api:me")
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_returns_current_user_profile(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        verify_url = reverse("accounts-api:otp-verify")
+        me_url = reverse("accounts-api:me")
+
+        verify_response = self.client.post(
+            verify_url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {verify_response.data['access']}",
+        )
+
+        response = self.client.get(me_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["phone_number"], "+989121234567")
+        self.assertTrue(response.data["is_phone_verified"])
+        self.assertIn("created_at", response.data)
+        self.assertIn("updated_at", response.data)
+
+    def test_updates_current_user_full_name(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        verify_url = reverse("accounts-api:otp-verify")
+        me_url = reverse("accounts-api:me")
+
+        verify_response = self.client.post(
+            verify_url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {verify_response.data['access']}",
+        )
+
+        response = self.client.patch(
+            me_url,
+            data={
+                "full_name": "  Ali Test  ",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["full_name"], "Ali Test")
+
+    def test_does_not_update_read_only_identity_fields(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        verify_url = reverse("accounts-api:otp-verify")
+        me_url = reverse("accounts-api:me")
+
+        verify_response = self.client.post(
+            verify_url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {verify_response.data['access']}",
+        )
+
+        response = self.client.patch(
+            me_url,
+            data={
+                "phone_number": "+989991234567",
+                "email": "new@example.com",
+                "is_phone_verified": False,
+                "full_name": "Ali Updated",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["phone_number"], "+989121234567")
+        self.assertIsNone(response.data["email"])
+        self.assertTrue(response.data["is_phone_verified"])
+        self.assertEqual(response.data["full_name"], "Ali Updated")
