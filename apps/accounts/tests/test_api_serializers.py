@@ -1,8 +1,12 @@
 from django.test import SimpleTestCase
 
 from apps.accounts.api.serializers import (
+    LogoutRequestSerializer,
+    LogoutResponseSerializer,
     OTPRequestSerializer,
     OTPVerificationSerializer,
+    TokenRefreshRequestSerializer,
+    TokenRefreshResponseSerializer,
 )
 from apps.accounts.models import OTPChallenge
 
@@ -163,3 +167,43 @@ class OTPVerificationSerializerTests(SimpleTestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("purpose", serializer.errors)
+
+
+class AuthSessionSerializerTests(SimpleTestCase):
+    def test_token_refresh_request_accepts_refresh_token(self):
+        serializer = TokenRefreshRequestSerializer(
+            data={
+                "refresh": "refresh-token-value",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["refresh"],
+            "refresh-token-value",
+        )
+
+    def test_token_refresh_request_rejects_missing_refresh_token(self):
+        serializer = TokenRefreshRequestSerializer(data={})
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("refresh", serializer.errors)
+
+    def test_logout_request_accepts_refresh_token(self):
+        serializer = LogoutRequestSerializer(
+            data={
+                "refresh": "refresh-token-value",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["refresh"],
+            "refresh-token-value",
+        )
+
+    def test_logout_request_rejects_missing_refresh_token(self):
+        serializer = LogoutRequestSerializer(data={})
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("refresh", serializer.errors)
