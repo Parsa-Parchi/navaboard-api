@@ -1,6 +1,7 @@
-from django.test import SimpleTestCase
-
+from django.test import SimpleTestCase, TestCase
+from django.contrib.auth import get_user_model
 from apps.accounts.api.serializers import (
+    CurrentUserProfileSerializer,
     LogoutRequestSerializer,
     LogoutResponseSerializer,
     OTPRequestSerializer,
@@ -9,7 +10,7 @@ from apps.accounts.api.serializers import (
     TokenRefreshResponseSerializer,
 )
 from apps.accounts.models import OTPChallenge
-
+User = get_user_model()
 
 class OTPRequestSerializerTests(SimpleTestCase):
     def test_validates_and_normalizes_phone_number(self):
@@ -207,3 +208,65 @@ class AuthSessionSerializerTests(SimpleTestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("refresh", serializer.errors)
+
+class CurrentUserProfileSerializerTests(TestCase):
+    def test_serializes_current_user_profile(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            email="ali@example.com",
+            full_name="Ali Test",
+            is_phone_verified=True,
+        )
+
+        serializer = CurrentUserProfileSerializer(user)
+
+        self.assertEqual(serializer.data["phone_number"], "+989121234567")
+        self.assertEqual(serializer.data["email"], "ali@example.com")
+        self.assertEqual(serializer.data["full_name"], "Ali Test")
+        self.assertTrue(serializer.data["is_phone_verified"])
+
+    def test_updates_full_name_and_trims_whitespace(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            full_name="Old Name",
+        )
+
+        serializer = CurrentUserProfileSerializer(
+            instance=user,
+            data={
+                "full_name": "  New Name  ",
+            },
+            partial=True,
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        updated_user = serializer.save()
+
+        self.assertEqual(updated_user.full_name, "New Name")
+
+    def test_ignores_read_only_identity_fields_when_updating(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            email="old@example.com",
+            full_name="Old Name",
+            is_phone_verified=True,
+        )
+
+        serializer = CurrentUserProfileSerializer(
+            instance=user,
+            data={
+                "phone_number": "+989991234567",
+                "email": "new@example.com",
+                "is_phone_verified": False,
+                "full_name": "New Name",
+            },
+            partial=True,
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        updated_user = serializer.save()
+
+        self.assertEqual(updated_user.phone_number, "+989121234567")
+        self.assertEqual(updated_user.email, "old@example.com")
+        self.assertTrue(updated_user.is_phone_verified)
+        self.assertEqual(updated_user.full_name, "New Name")
