@@ -2,9 +2,10 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from apps.accounts.services.email_auth import authenticate_with_email_and_password
 from apps.accounts.api.serializers import (
     CurrentUserProfileSerializer,
+    EmailPasswordLoginSerializer,
     LogoutRequestSerializer,
     LogoutResponseSerializer,
     OTPRequestResponseSerializer,
@@ -200,3 +201,44 @@ class CurrentUserProfileAPIView(APIView):
         serializer.save()
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class EmailPasswordLoginAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = EmailPasswordLoginSerializer
+
+    @extend_schema(
+        request=EmailPasswordLoginSerializer,
+        responses={
+            status.HTTP_200_OK: OTPVerificationResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            user = authenticate_with_email_and_password(
+                email=serializer.validated_data["email"],
+                password=serializer.validated_data["password"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        token_pair = issue_auth_token_pair(user)
+
+        response_data = {
+            "access": token_pair.access,
+            "refresh": token_pair.refresh,
+            "token_type": "Bearer",
+            "user_created": False,
+            "user": {
+                "id": user.id,
+                "phone_number": user.phone_number,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_phone_verified": user.is_phone_verified,
+            },
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)

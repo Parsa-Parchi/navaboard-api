@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.accounts.api.views import (
     CurrentUserProfileAPIView,
+    EmailPasswordLoginAPIView,
     LogoutAPIView,
     OTPRequestAPIView,
     OTPVerificationAPIView,
@@ -37,5 +38,11 @@ urlpatterns = [
         "auth/me/",
         CurrentUserProfileAPIView.as_view(),
         name="me",
+    ),
+
+    path(
+        "auth/email/login/",
+        EmailPasswordLoginAPIView.as_view(),
+        name="email-login",
     ),
 ]
