@@ -2,6 +2,7 @@ from django.test import SimpleTestCase, TestCase
 from django.contrib.auth import get_user_model
 from apps.accounts.api.serializers import (
     CurrentUserProfileSerializer,
+    EmailPasswordLoginSerializer,
     LogoutRequestSerializer,
     LogoutResponseSerializer,
     OTPRequestSerializer,
@@ -270,3 +271,54 @@ class CurrentUserProfileSerializerTests(TestCase):
         self.assertEqual(updated_user.email, "old@example.com")
         self.assertTrue(updated_user.is_phone_verified)
         self.assertEqual(updated_user.full_name, "New Name")
+
+class EmailPasswordLoginSerializerTests(SimpleTestCase):
+    def test_validates_and_normalizes_email(self):
+        serializer = EmailPasswordLoginSerializer(
+            data={
+                "email": "  Ali@Example.COM  ",
+                "password": "StrongPassword123!",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["email"], "ali@example.com")
+        self.assertEqual(
+            serializer.validated_data["password"],
+            "StrongPassword123!",
+        )
+
+    def test_preserves_password_whitespace(self):
+        serializer = EmailPasswordLoginSerializer(
+            data={
+                "email": "ali@example.com",
+                "password": "  StrongPassword123!  ",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["password"],
+            "  StrongPassword123!  ",
+        )
+
+    def test_rejects_invalid_email(self):
+        serializer = EmailPasswordLoginSerializer(
+            data={
+                "email": "not-an-email",
+                "password": "StrongPassword123!",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("email", serializer.errors)
+
+    def test_rejects_missing_password(self):
+        serializer = EmailPasswordLoginSerializer(
+            data={
+                "email": "ali@example.com",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("password", serializer.errors)

@@ -126,3 +126,18 @@ class CurrentUserProfileSerializer(serializers.ModelSerializer):
 
     def validate_full_name(self, value: str) -> str:
         return value.strip()
+
+class EmailPasswordLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        write_only=True,
+    )
+    password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={
+            "input_type": "password",
+        },
+    )
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
