@@ -5,7 +5,9 @@ from rest_framework.test import APITestCase
 from apps.accounts.models import OTPChallenge
 from apps.accounts.services.otp import check_otp_code, create_otp_challenge
 from django.test import override_settings
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class OTPRequestAPIViewTests(APITestCase):
 
@@ -370,3 +372,84 @@ class CurrentUserProfileAPIViewTests(APITestCase):
         self.assertIsNone(response.data["email"])
         self.assertTrue(response.data["is_phone_verified"])
         self.assertEqual(response.data["full_name"], "Ali Updated")
+class EmailPasswordLoginAPIViewTests(APITestCase):
+    def test_logs_in_verified_user_with_email_and_password(self):
+        user = User.objects.create_user(
+            email="ali@example.com",
+            password="StrongPassword123!",
+            is_email_verified=True,
+        )
+        url = reverse("accounts-api:email-login")
+
+        response = self.client.post(
+            url,
+            data={
+                "email": "ALI@example.com",
+                "password": "StrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["token_type"], "Bearer")
+        self.assertFalse(response.data["user_created"])
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+        self.assertEqual(str(response.data["user"]["id"]), str(user.id))
+        self.assertEqual(response.data["user"]["email"], "ali@example.com")
+
+    def test_rejects_wrong_password(self):
+        User.objects.create_user(
+            email="ali@example.com",
+            password="StrongPassword123!",
+            is_email_verified=True,
+        )
+        url = reverse("accounts-api:email-login")
+
+        response = self.client.post(
+            url,
+            data={
+                "email": "ali@example.com",
+                "password": "WrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_unverified_email(self):
+        User.objects.create_user(
+            email="ali@example.com",
+            password="StrongPassword123!",
+            is_email_verified=False,
+        )
+        url = reverse("accounts-api:email-login")
+
+        response = self.client.post(
+            url,
+            data={
+                "email": "ali@example.com",
+                "password": "StrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_account_without_password_login_enabled(self):
+        User.objects.create_user(
+            email="ali@example.com",
+            is_email_verified=True,
+        )
+        url = reverse("accounts-api:email-login")
+
+        response = self.client.post(
+            url,
+            data={
+                "email": "ali@example.com",
+                "password": "StrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
