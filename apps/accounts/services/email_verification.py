@@ -55,6 +55,11 @@ def create_email_verification_challenge(
     if User.objects.filter(email__iexact=normalized_email).exclude(id=user.id).exists():
         raise ValidationError("Email address is already in use.")
 
+    current_user_email = (user.email or "").strip().lower()
+
+    if current_user_email == normalized_email and user.is_email_verified:
+        raise ValidationError("Email address is already verified.")
+
     EmailVerificationChallenge.objects.filter(
         user=user,
         used_at__isnull=True,
