@@ -121,6 +121,11 @@ OTP_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
     default=DEBUG,
 )
 
+EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
+    "EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE",
+    default=DEBUG,
+)
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
