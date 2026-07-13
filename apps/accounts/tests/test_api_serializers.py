@@ -1,6 +1,10 @@
 from django.test import SimpleTestCase, TestCase
 from django.contrib.auth import get_user_model
 from apps.accounts.api.serializers import (
+    EmailVerificationConfirmResponseSerializer,
+    EmailVerificationConfirmSerializer,
+    EmailVerificationRequestResponseSerializer,
+    EmailVerificationRequestSerializer,
     ChangePasswordSerializer,
     CurrentUserProfileSerializer,
     EmailPasswordLoginSerializer,
@@ -414,3 +418,74 @@ class ChangePasswordSerializerTests(SimpleTestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("new_password", serializer.errors)
+
+class EmailVerificationRequestSerializerTests(SimpleTestCase):
+    def test_normalizes_email(self):
+        serializer = EmailVerificationRequestSerializer(
+            data={
+                "email": "  Ali@Example.COM  ",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["email"], "ali@example.com")
+
+
+class EmailVerificationConfirmSerializerTests(SimpleTestCase):
+    def test_normalizes_email_and_code(self):
+        serializer = EmailVerificationConfirmSerializer(
+            data={
+                "email": "  Ali@Example.COM  ",
+                "code": " 123456 ",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["email"], "ali@example.com")
+        self.assertEqual(serializer.validated_data["code"], "123456")
+
+    def test_rejects_non_numeric_code(self):
+        serializer = EmailVerificationConfirmSerializer(
+            data={
+                "email": "ali@example.com",
+                "code": "abc123",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
+
+    def test_rejects_code_with_invalid_length(self):
+        serializer = EmailVerificationConfirmSerializer(
+            data={
+                "email": "ali@example.com",
+                "code": "12345",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
+
+
+class EmailVerificationResponseSerializerTests(SimpleTestCase):
+    def test_request_response_accepts_optional_development_code(self):
+        serializer = EmailVerificationRequestResponseSerializer(
+            data={
+                "detail": "Email verification code has been created.",
+                "expires_at": "2026-01-01T12:00:00Z",
+                "development_verification_code": "123456",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_confirm_response_is_valid(self):
+        serializer = EmailVerificationConfirmResponseSerializer(
+            data={
+                "detail": "Email address has been verified successfully.",
+                "email": "ali@example.com",
+                "is_email_verified": True,
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
