@@ -1,6 +1,10 @@
 from django.test import SimpleTestCase, TestCase
 from django.contrib.auth import get_user_model
 from apps.accounts.api.serializers import (
+    PhoneChangeConfirmResponseSerializer,
+    PhoneChangeConfirmSerializer,
+    PhoneChangeRequestResponseSerializer,
+    PhoneChangeRequestSerializer,
     PasswordResetConfirmResponseSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestResponseSerializer,
@@ -575,6 +579,87 @@ class PasswordResetResponseSerializerTests(SimpleTestCase):
         serializer = PasswordResetConfirmResponseSerializer(
             data={
                 "detail": "Password has been reset successfully.",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+class PhoneChangeRequestSerializerTests(SimpleTestCase):
+    def test_normalizes_phone_number(self):
+        serializer = PhoneChangeRequestSerializer(
+            data={
+                "phone_number": "0912 444 5566",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["phone_number"], "+989124445566")
+
+    def test_rejects_invalid_phone_number(self):
+        serializer = PhoneChangeRequestSerializer(
+            data={
+                "phone_number": "12345",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("phone_number", serializer.errors)
+
+
+class PhoneChangeConfirmSerializerTests(SimpleTestCase):
+    def test_normalizes_phone_number_and_code(self):
+        serializer = PhoneChangeConfirmSerializer(
+            data={
+                "phone_number": "0912 444 5566",
+                "code": " 123456 ",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["phone_number"], "+989124445566")
+        self.assertEqual(serializer.validated_data["code"], "123456")
+
+    def test_rejects_non_numeric_code(self):
+        serializer = PhoneChangeConfirmSerializer(
+            data={
+                "phone_number": "+989124445566",
+                "code": "abc123",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
+
+    def test_rejects_code_with_invalid_length(self):
+        serializer = PhoneChangeConfirmSerializer(
+            data={
+                "phone_number": "+989124445566",
+                "code": "12345",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
+
+
+class PhoneChangeResponseSerializerTests(SimpleTestCase):
+    def test_request_response_accepts_optional_development_code(self):
+        serializer = PhoneChangeRequestResponseSerializer(
+            data={
+                "detail": "Phone change code has been created.",
+                "expires_at": "2026-01-01T12:00:00Z",
+                "development_otp_code": "123456",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_confirm_response_is_valid(self):
+        serializer = PhoneChangeConfirmResponseSerializer(
+            data={
+                "detail": "Phone number has been changed successfully.",
+                "phone_number": "+989124445566",
+                "is_phone_verified": True,
             }
         )
 
