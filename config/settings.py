@@ -121,9 +121,75 @@ OTP_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
     default=DEBUG,
 )
 
+
 EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
     "EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE",
     default=DEBUG,
+)
+
+SMS_PROVIDER = env(
+    "SMS_PROVIDER",
+    default="console",
+)
+
+SMSIR_API_URL = env(
+    "SMSIR_API_URL",
+    default="https://api.sms.ir/v1/send/verify",
+)
+
+SMSIR_API_KEY = env(
+    "SMSIR_API_KEY",
+    default="",
+)
+
+SMSIR_VERIFY_TEMPLATE_ID = env.int(
+    "SMSIR_VERIFY_TEMPLATE_ID",
+    default=0,
+)
+
+SMSIR_CODE_PARAMETER_NAME = env(
+    "SMSIR_CODE_PARAMETER_NAME",
+    default="CODE",
+)
+
+SMSIR_TIMEOUT_SECONDS = env.int(
+    "SMSIR_TIMEOUT_SECONDS",
+    default=10,
+)
+
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+
+EMAIL_HOST = env(
+    "EMAIL_HOST",
+    default="",
+)
+
+EMAIL_PORT = env.int(
+    "EMAIL_PORT",
+    default=587,
+)
+
+EMAIL_USE_TLS = env.bool(
+    "EMAIL_USE_TLS",
+    default=True,
+)
+
+EMAIL_HOST_USER = env(
+    "EMAIL_HOST_USER",
+    default="",
+)
+
+EMAIL_HOST_PASSWORD = env(
+    "EMAIL_HOST_PASSWORD",
+    default="",
+)
+
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL",
+    default="NavaBoard <no-reply@navaboard.local>",
 )
 
 
