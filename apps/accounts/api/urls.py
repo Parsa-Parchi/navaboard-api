@@ -1,6 +1,8 @@
 from django.urls import path
 
 from apps.accounts.api.views import (
+    EmailVerificationConfirmAPIView,
+    EmailVerificationRequestAPIView,
     ChangePasswordAPIView,
     CurrentUserProfileAPIView,
     EmailPasswordLoginAPIView,
@@ -46,6 +48,19 @@ urlpatterns = [
         EmailPasswordLoginAPIView.as_view(),
         name="email-login",
     ),
+
+    path(
+    "auth/email/verification/request/",
+    EmailVerificationRequestAPIView.as_view(),
+    name="email-verification-request",
+    ),
+
+    path(
+    "auth/email/verification/confirm/",
+    EmailVerificationConfirmAPIView.as_view(),
+    name="email-verification-confirm",
+    ),
+
     path(
         "auth/password/set/",
         SetInitialPasswordAPIView.as_view(),
@@ -57,4 +72,6 @@ urlpatterns = [
         ChangePasswordAPIView.as_view(),
         name="change-password",
     ),
+
+
 ]
