@@ -5,7 +5,7 @@ from apps.accounts.services.tokens import issue_auth_token_pair
 from apps.accounts.models import OTPChallenge
 from apps.accounts.services.otp import check_otp_code, create_otp_challenge
 from django.test import TestCase, override_settings
-from apps.accounts.models import EmailVerificationChallenge
+from apps.accounts.models import EmailVerificationChallenge, OTPChallenge
 
 
 from django.contrib.auth import get_user_model
@@ -757,3 +757,141 @@ class EmailVerificationAPIViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+class PasswordResetAPIViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_user_can_request_password_reset_code(self):
+        response = self.client.post(
+            reverse("accounts-api:password-reset-request"),
+            {
+                "phone_number": "0912 123 4567",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            response.data["detail"],
+            "Password reset code has been created.",
+        )
+        self.assertIn("expires_at", response.data)
+        self.assertIn("development_otp_code", response.data)
+
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989121234567",
+            purpose=OTPChallenge.Purpose.PASSWORD_RESET,
+        )
+
+        self.assertEqual(challenge.phone_number, self.user.phone_number)
+        self.assertEqual(len(response.data["development_otp_code"]), 6)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=False)
+    def test_request_response_hides_development_code_when_disabled(self):
+        response = self.client.post(
+            reverse("accounts-api:password-reset-request"),
+            {
+                "phone_number": "+989121234567",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNotIn("development_otp_code", response.data)
+
+    def test_rejects_password_reset_request_for_unknown_phone_number(self):
+        response = self.client.post(
+            reverse("accounts-api:password-reset-request"),
+            {
+                "phone_number": "+989991234567",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_user_can_confirm_password_reset_code(self):
+        request_response = self.client.post(
+            reverse("accounts-api:password-reset-request"),
+            {
+                "phone_number": "+989121234567",
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            reverse("accounts-api:password-reset-confirm"),
+            {
+                "phone_number": "0912 123 4567",
+                "code": request_response.data["development_otp_code"],
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.user.refresh_from_db()
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989121234567",
+            purpose=OTPChallenge.Purpose.PASSWORD_RESET,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["detail"],
+            "Password has been reset successfully.",
+        )
+        self.assertTrue(self.user.check_password("NewStrongPassword123!"))
+        self.assertIsNotNone(challenge.used_at)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_confirm_rejects_invalid_code(self):
+        request_response = self.client.post(
+            reverse("accounts-api:password-reset-request"),
+            {
+                "phone_number": "+989121234567",
+            },
+            format="json",
+        )
+
+        valid_code = request_response.data["development_otp_code"]
+        invalid_code = "000000" if valid_code != "000000" else "111111"
+
+        response = self.client.post(
+            reverse("accounts-api:password-reset-confirm"),
+            {
+                "phone_number": "+989121234567",
+                "code": invalid_code,
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989121234567",
+            purpose=OTPChallenge.Purpose.PASSWORD_RESET,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(challenge.attempts_count, 1)
+        self.assertIsNone(challenge.used_at)
+
+    def test_confirm_rejects_when_no_active_challenge_exists(self):
+        response = self.client.post(
+            reverse("accounts-api:password-reset-confirm"),
+            {
+                "phone_number": "+989121234567",
+                "code": "123456",
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

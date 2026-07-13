@@ -1,6 +1,8 @@
 from django.urls import path
 
 from apps.accounts.api.views import (
+    PasswordResetConfirmAPIView,
+    PasswordResetRequestAPIView,
     EmailVerificationConfirmAPIView,
     EmailVerificationRequestAPIView,
     ChangePasswordAPIView,
@@ -71,6 +73,17 @@ urlpatterns = [
         "auth/password/change/",
         ChangePasswordAPIView.as_view(),
         name="change-password",
+    ),
+    path(
+    "auth/password/reset/request/",
+    PasswordResetRequestAPIView.as_view(),
+    name="password-reset-request",
+    ),
+
+    path(
+    "auth/password/reset/confirm/",
+    PasswordResetConfirmAPIView.as_view(),
+    name="password-reset-confirm",
     ),
 
 
