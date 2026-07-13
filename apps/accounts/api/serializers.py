@@ -141,3 +141,12 @@ class EmailPasswordLoginSerializer(serializers.Serializer):
 
     def validate_email(self, value: str) -> str:
         return value.strip().lower()
+
+class SetInitialPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={
+            "input_type": "password",
+        },
+    )
