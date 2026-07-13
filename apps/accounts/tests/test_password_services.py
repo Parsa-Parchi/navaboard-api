@@ -2,7 +2,10 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from apps.accounts.services.passwords import set_initial_password_for_user
+from apps.accounts.services.passwords import (
+    change_password_for_user,
+    set_initial_password_for_user,
+)
 
 
 User = get_user_model()
@@ -59,4 +62,75 @@ class PasswordServiceTests(TestCase):
             set_initial_password_for_user(
                 user=user,
                 password="password",
+            )
+
+    def test_changes_password_for_user_with_existing_password(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+
+        updated_user = change_password_for_user(
+            user=user,
+            current_password="OldStrongPassword123!",
+            new_password="NewStrongPassword123!",
+        )
+
+        self.assertTrue(updated_user.check_password("NewStrongPassword123!"))
+        self.assertFalse(updated_user.check_password("OldStrongPassword123!"))
+
+    def test_rejects_change_password_with_wrong_current_password(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            change_password_for_user(
+                user=user,
+                current_password="WrongPassword123!",
+                new_password="NewStrongPassword123!",
+            )
+
+    def test_rejects_change_password_when_password_is_not_set(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            change_password_for_user(
+                user=user,
+                current_password="OldStrongPassword123!",
+                new_password="NewStrongPassword123!",
+            )
+
+    def test_rejects_blank_current_password(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            change_password_for_user(
+                user=user,
+                current_password="",
+                new_password="NewStrongPassword123!",
+            )
+
+    def test_rejects_blank_new_password(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            change_password_for_user(
+                user=user,
+                current_password="OldStrongPassword123!",
+                new_password="",
             )
