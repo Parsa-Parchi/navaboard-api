@@ -54,12 +54,26 @@ from apps.accounts.services.tokens import (
     refresh_auth_token_pair,
 )
 
+from apps.accounts.services.notifications import (
+    NotificationDeliveryError,
+    send_email_verification_code,
+    send_login_otp_code,
+    send_password_reset_code,
+    send_phone_change_code,
+)
+
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.exceptions import APIException, ValidationError as DRFValidationError
 
+
+
+class NotificationDeliveryAPIException(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "Verification code could not be delivered."
+    default_code = "notification_delivery_failed"
 
 
 class OTPRequestAPIView(APIView):
@@ -83,6 +97,15 @@ class OTPRequestAPIView(APIView):
             purpose=serializer.validated_data["purpose"],
             requested_ip=self._get_client_ip(request),
         )
+
+        try:
+            send_login_otp_code(
+                phone_number=result.challenge.phone_number,
+                code=result.plain_code,
+            )
+        except NotificationDeliveryError as exc:
+            raise NotificationDeliveryAPIException() from exc
+
 
         response_data = {
             "detail": "OTP code has been generated.",
@@ -350,6 +373,14 @@ class PasswordResetRequestAPIView(APIView):
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
 
+        try:
+            send_password_reset_code(
+                phone_number=result.challenge.phone_number,
+                code=result.plain_code,
+            )
+        except NotificationDeliveryError as exc:
+            raise NotificationDeliveryAPIException() from exc
+
         response_data = {
             "detail": "Password reset code has been created.",
             "expires_at": result.challenge.expires_at,
@@ -408,6 +439,14 @@ class EmailVerificationRequestAPIView(APIView):
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
 
+        try:
+            send_email_verification_code(
+                email=result.challenge.email,
+                code=result.plain_code,
+            )
+        except NotificationDeliveryError as exc:
+            raise NotificationDeliveryAPIException() from exc
+
         response_data = {
             "detail": "Email verification code has been created.",
             "expires_at": result.challenge.expires_at,
@@ -465,6 +504,14 @@ class PhoneChangeRequestAPIView(APIView):
             )
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
+
+        try:
+            send_phone_change_code(
+                phone_number=result.challenge.phone_number,
+                code=result.plain_code,
+            )
+        except NotificationDeliveryError as exc:
+            raise NotificationDeliveryAPIException() from exc
 
         response_data = {
             "detail": "Phone change code has been created.",
