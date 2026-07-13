@@ -3,11 +3,19 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.accounts.services.email_auth import authenticate_with_email_and_password
+from apps.accounts.services.email_verification import (
+    create_email_verification_challenge,
+    verify_email_challenge,
+)
 from apps.accounts.services.passwords import (
     change_password_for_user,
     set_initial_password_for_user,
 )
 from apps.accounts.api.serializers import (
+    EmailVerificationConfirmResponseSerializer,
+    EmailVerificationConfirmSerializer,
+    EmailVerificationRequestResponseSerializer,
+    EmailVerificationRequestSerializer,
     ChangePasswordSerializer,
     CurrentUserProfileSerializer,
     EmailPasswordLoginSerializer,
@@ -301,5 +309,63 @@ class ChangePasswordAPIView(APIView):
 
         return Response(
             {"detail": "Password has been changed successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+class EmailVerificationRequestAPIView(APIView):
+    @extend_schema(
+        tags=["auth"],
+        request=EmailVerificationRequestSerializer,
+        responses={status.HTTP_201_CREATED: EmailVerificationRequestResponseSerializer},
+    )
+    def post(self, request):
+        serializer = EmailVerificationRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = create_email_verification_challenge(
+                user=request.user,
+                email=serializer.validated_data["email"],
+                requested_ip=request.META.get("REMOTE_ADDR"),
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        response_data = {
+            "detail": "Email verification code has been created.",
+            "expires_at": result.challenge.expires_at,
+        }
+
+        if settings.EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE:
+            response_data["development_verification_code"] = result.plain_code
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class EmailVerificationConfirmAPIView(APIView):
+    @extend_schema(
+        tags=["auth"],
+        request=EmailVerificationConfirmSerializer,
+        responses={status.HTTP_200_OK: EmailVerificationConfirmResponseSerializer},
+    )
+    def post(self, request):
+        serializer = EmailVerificationConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = verify_email_challenge(
+                user=request.user,
+                email=serializer.validated_data["email"],
+                plain_code=serializer.validated_data["code"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        return Response(
+            {
+                "detail": "Email address has been verified successfully.",
+                "email": result.user.email,
+                "is_email_verified": result.user.is_email_verified,
+            },
             status=status.HTTP_200_OK,
         )

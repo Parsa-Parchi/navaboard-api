@@ -1,11 +1,15 @@
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from apps.accounts.services.tokens import issue_auth_token_pair
 from apps.accounts.models import OTPChallenge
 from apps.accounts.services.otp import check_otp_code, create_otp_challenge
-from django.test import override_settings
+from django.test import TestCase, override_settings
+from apps.accounts.models import EmailVerificationChallenge
+
+
 from django.contrib.auth import get_user_model
+
 
 User = get_user_model()
 
@@ -619,3 +623,137 @@ class ChangePasswordAPIViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class EmailVerificationAPIViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+
+    @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_authenticated_user_can_request_email_verification_code(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("accounts-api:email-verification-request"),
+            {
+                "email": "  Ali@Example.COM  ",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            response.data["detail"],
+            "Email verification code has been created.",
+        )
+        self.assertIn("expires_at", response.data)
+        self.assertIn("development_verification_code", response.data)
+
+        challenge = EmailVerificationChallenge.objects.get(user=self.user)
+
+        self.assertEqual(challenge.email, "ali@example.com")
+        self.assertEqual(len(response.data["development_verification_code"]), 6)
+
+    @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=False)
+    def test_request_response_hides_development_code_when_disabled(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("accounts-api:email-verification-request"),
+            {
+                "email": "ali@example.com",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNotIn("development_verification_code", response.data)
+
+    def test_anonymous_user_cannot_request_email_verification_code(self):
+        response = self.client.post(
+            reverse("accounts-api:email-verification-request"),
+            {
+                "email": "ali@example.com",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_authenticated_user_can_confirm_email_verification_code(self):
+        self.client.force_authenticate(user=self.user)
+
+        request_response = self.client.post(
+            reverse("accounts-api:email-verification-request"),
+            {
+                "email": "Ali@Example.COM",
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            reverse("accounts-api:email-verification-confirm"),
+            {
+                "email": "ali@example.com",
+                "code": request_response.data["development_verification_code"],
+            },
+            format="json",
+        )
+
+        self.user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["detail"],
+            "Email address has been verified successfully.",
+        )
+        self.assertEqual(response.data["email"], "ali@example.com")
+        self.assertTrue(response.data["is_email_verified"])
+        self.assertEqual(self.user.email, "ali@example.com")
+        self.assertTrue(self.user.is_email_verified)
+
+    @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_confirm_rejects_invalid_code(self):
+        self.client.force_authenticate(user=self.user)
+
+        request_response = self.client.post(
+            reverse("accounts-api:email-verification-request"),
+            {
+                "email": "ali@example.com",
+            },
+            format="json",
+        )
+
+        valid_code = request_response.data["development_verification_code"]
+        invalid_code = "000000" if valid_code != "000000" else "111111"
+
+        response = self.client.post(
+            reverse("accounts-api:email-verification-confirm"),
+            {
+                "email": "ali@example.com",
+                "code": invalid_code,
+            },
+            format="json",
+        )
+
+        challenge = EmailVerificationChallenge.objects.get(user=self.user)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(challenge.attempts_count, 1)
+        self.assertIsNone(challenge.used_at)
+
+    def test_anonymous_user_cannot_confirm_email_verification_code(self):
+        response = self.client.post(
+            reverse("accounts-api:email-verification-confirm"),
+            {
+                "email": "ali@example.com",
+                "code": "123456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
