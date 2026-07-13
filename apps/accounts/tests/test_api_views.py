@@ -525,3 +525,97 @@ class SetInitialPasswordAPIViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class ChangePasswordAPIViewTests(APITestCase):
+    def test_changes_password_for_authenticated_user(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+        token_pair = issue_auth_token_pair(user)
+        url = reverse("accounts-api:change-password")
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+
+        response = self.client.post(
+            url,
+            data={
+                "current_password": "OldStrongPassword123!",
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["detail"],
+            "Password has been changed successfully.",
+        )
+
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("NewStrongPassword123!"))
+        self.assertFalse(user.check_password("OldStrongPassword123!"))
+
+    def test_rejects_unauthenticated_request(self):
+        url = reverse("accounts-api:change-password")
+
+        response = self.client.post(
+            url,
+            data={
+                "current_password": "OldStrongPassword123!",
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_rejects_wrong_current_password(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+        token_pair = issue_auth_token_pair(user)
+        url = reverse("accounts-api:change-password")
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+
+        response = self.client.post(
+            url,
+            data={
+                "current_password": "WrongPassword123!",
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_user_without_existing_password(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+        token_pair = issue_auth_token_pair(user)
+        url = reverse("accounts-api:change-password")
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+
+        response = self.client.post(
+            url,
+            data={
+                "current_password": "OldStrongPassword123!",
+                "new_password": "NewStrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

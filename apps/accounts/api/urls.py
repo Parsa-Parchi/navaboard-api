@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.accounts.api.views import (
+    ChangePasswordAPIView,
     CurrentUserProfileAPIView,
     EmailPasswordLoginAPIView,
     LogoutAPIView,
@@ -49,5 +50,11 @@ urlpatterns = [
         "auth/password/set/",
         SetInitialPasswordAPIView.as_view(),
         name="set-password",
+    ),
+
+    path(
+        "auth/password/change/",
+        ChangePasswordAPIView.as_view(),
+        name="change-password",
     ),
 ]

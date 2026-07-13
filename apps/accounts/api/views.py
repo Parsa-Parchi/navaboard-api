@@ -3,8 +3,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.accounts.services.email_auth import authenticate_with_email_and_password
-from apps.accounts.services.passwords import set_initial_password_for_user
+from apps.accounts.services.passwords import (
+    change_password_for_user,
+    set_initial_password_for_user,
+)
 from apps.accounts.api.serializers import (
+    ChangePasswordSerializer,
     CurrentUserProfileSerializer,
     EmailPasswordLoginSerializer,
     LogoutRequestSerializer,
@@ -269,5 +273,33 @@ class SetInitialPasswordAPIView(APIView):
 
         return Response(
             {"detail": "Password has been set successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+class ChangePasswordAPIView(APIView):
+    serializer_class = ChangePasswordSerializer
+
+    @extend_schema(
+        request=ChangePasswordSerializer,
+        responses={
+            status.HTTP_200_OK: LogoutResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            change_password_for_user(
+                user=request.user,
+                current_password=serializer.validated_data["current_password"],
+                new_password=serializer.validated_data["new_password"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        return Response(
+            {"detail": "Password has been changed successfully."},
             status=status.HTTP_200_OK,
         )
