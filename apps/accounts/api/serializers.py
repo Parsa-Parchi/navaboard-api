@@ -259,3 +259,48 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 class PasswordResetConfirmResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
+
+class PhoneChangeRequestSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(
+        write_only=True,
+    )
+
+    def validate_phone_number(self, value: str) -> str:
+        return normalize_iranian_mobile_number(value)
+
+
+class PhoneChangeRequestResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+    development_otp_code = serializers.CharField(
+        required=False,
+    )
+
+
+class PhoneChangeConfirmSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(
+        write_only=True,
+    )
+    code = serializers.CharField(
+        max_length=6,
+        write_only=True,
+    )
+
+    def validate_phone_number(self, value: str) -> str:
+        return normalize_iranian_mobile_number(value)
+
+    def validate_code(self, value: str) -> str:
+        normalized_code = value.strip()
+
+        if len(normalized_code) != 6 or not normalized_code.isdigit():
+            raise serializers.ValidationError(
+                "Phone change code must be a 6-digit number."
+            )
+
+        return normalized_code
+
+
+class PhoneChangeConfirmResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    phone_number = serializers.CharField()
+    is_phone_verified = serializers.BooleanField()
