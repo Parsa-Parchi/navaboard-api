@@ -23,3 +23,28 @@ def set_initial_password_for_user(
     user.save(update_fields=["password", "updated_at"])
 
     return user
+
+def change_password_for_user(
+    *,
+    user: Any,
+    current_password: str,
+    new_password: str,
+) -> Any:
+    if not current_password:
+        raise ValidationError("Current password is required.")
+
+    if not new_password:
+        raise ValidationError("New password is required.")
+
+    if not user.has_usable_password():
+        raise ValidationError("Password is not set for this account.")
+
+    if not user.check_password(current_password):
+        raise ValidationError("Current password is incorrect.")
+
+    validate_password(new_password, user=user)
+
+    user.set_password(new_password)
+    user.save(update_fields=["password", "updated_at"])
+
+    return user
