@@ -7,6 +7,7 @@ from apps.accounts.api.serializers import (
     LogoutResponseSerializer,
     OTPRequestSerializer,
     OTPVerificationSerializer,
+    SetInitialPasswordSerializer,
     TokenRefreshRequestSerializer,
     TokenRefreshResponseSerializer,
 )
@@ -319,6 +320,39 @@ class EmailPasswordLoginSerializerTests(SimpleTestCase):
                 "email": "ali@example.com",
             }
         )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("password", serializer.errors)
+
+class SetInitialPasswordSerializerTests(SimpleTestCase):
+    def test_accepts_password(self):
+        serializer = SetInitialPasswordSerializer(
+            data={
+                "password": "StrongPassword123!",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["password"],
+            "StrongPassword123!",
+        )
+
+    def test_preserves_password_whitespace(self):
+        serializer = SetInitialPasswordSerializer(
+            data={
+                "password": "  StrongPassword123!  ",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["password"],
+            "  StrongPassword123!  ",
+        )
+
+    def test_rejects_missing_password(self):
+        serializer = SetInitialPasswordSerializer(data={})
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("password", serializer.errors)
