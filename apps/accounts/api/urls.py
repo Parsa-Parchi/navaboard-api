@@ -6,9 +6,9 @@ from apps.accounts.api.views import (
     LogoutAPIView,
     OTPRequestAPIView,
     OTPVerificationAPIView,
+    SetInitialPasswordAPIView,
     TokenRefreshAPIView,
 )
-
 app_name = "accounts-api"
 
 urlpatterns = [
@@ -44,5 +44,10 @@ urlpatterns = [
         "auth/email/login/",
         EmailPasswordLoginAPIView.as_view(),
         name="email-login",
+    ),
+    path(
+        "auth/password/set/",
+        SetInitialPasswordAPIView.as_view(),
+        name="set-password",
     ),
 ]
