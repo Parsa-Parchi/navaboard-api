@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase, TestCase
 from django.contrib.auth import get_user_model
 from apps.accounts.api.serializers import (
+    ChangePasswordSerializer,
     CurrentUserProfileSerializer,
     EmailPasswordLoginSerializer,
     LogoutRequestSerializer,
@@ -356,3 +357,60 @@ class SetInitialPasswordSerializerTests(SimpleTestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("password", serializer.errors)
+
+class ChangePasswordSerializerTests(SimpleTestCase):
+    def test_accepts_current_and_new_password(self):
+        serializer = ChangePasswordSerializer(
+            data={
+                "current_password": "OldStrongPassword123!",
+                "new_password": "NewStrongPassword123!",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["current_password"],
+            "OldStrongPassword123!",
+        )
+        self.assertEqual(
+            serializer.validated_data["new_password"],
+            "NewStrongPassword123!",
+        )
+
+    def test_preserves_password_whitespace(self):
+        serializer = ChangePasswordSerializer(
+            data={
+                "current_password": "  OldStrongPassword123!  ",
+                "new_password": "  NewStrongPassword123!  ",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["current_password"],
+            "  OldStrongPassword123!  ",
+        )
+        self.assertEqual(
+            serializer.validated_data["new_password"],
+            "  NewStrongPassword123!  ",
+        )
+
+    def test_rejects_missing_current_password(self):
+        serializer = ChangePasswordSerializer(
+            data={
+                "new_password": "NewStrongPassword123!",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("current_password", serializer.errors)
+
+    def test_rejects_missing_new_password(self):
+        serializer = ChangePasswordSerializer(
+            data={
+                "current_password": "OldStrongPassword123!",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("new_password", serializer.errors)
