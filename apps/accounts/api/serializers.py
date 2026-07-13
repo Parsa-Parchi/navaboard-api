@@ -150,3 +150,19 @@ class SetInitialPasswordSerializer(serializers.Serializer):
             "input_type": "password",
         },
     )
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={
+            "input_type": "password",
+        },
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={
+            "input_type": "password",
+        },
+    )
