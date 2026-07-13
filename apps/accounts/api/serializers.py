@@ -211,3 +211,51 @@ class EmailVerificationConfirmResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
     email = serializers.EmailField()
     is_email_verified = serializers.BooleanField()
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(
+        write_only=True,
+    )
+
+    def validate_phone_number(self, value: str) -> str:
+        return normalize_iranian_mobile_number(value)
+
+
+class PasswordResetRequestResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+    development_otp_code = serializers.CharField(
+        required=False,
+    )
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(
+        write_only=True,
+    )
+    code = serializers.CharField(
+        max_length=6,
+        write_only=True,
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        style={"input_type": "password"},
+    )
+
+    def validate_phone_number(self, value: str) -> str:
+        return normalize_iranian_mobile_number(value)
+
+    def validate_code(self, value: str) -> str:
+        normalized_code = value.strip()
+
+        if len(normalized_code) != 6 or not normalized_code.isdigit():
+            raise serializers.ValidationError(
+                "Password reset code must be a 6-digit number."
+            )
+
+        return normalized_code
+
+
+class PasswordResetConfirmResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()

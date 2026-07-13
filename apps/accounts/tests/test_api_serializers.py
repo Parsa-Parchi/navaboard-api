@@ -1,6 +1,10 @@
 from django.test import SimpleTestCase, TestCase
 from django.contrib.auth import get_user_model
 from apps.accounts.api.serializers import (
+    PasswordResetConfirmResponseSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestResponseSerializer,
+    PasswordResetRequestSerializer,
     EmailVerificationConfirmResponseSerializer,
     EmailVerificationConfirmSerializer,
     EmailVerificationRequestResponseSerializer,
@@ -485,6 +489,92 @@ class EmailVerificationResponseSerializerTests(SimpleTestCase):
                 "detail": "Email address has been verified successfully.",
                 "email": "ali@example.com",
                 "is_email_verified": True,
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+class PasswordResetRequestSerializerTests(SimpleTestCase):
+    def test_normalizes_phone_number(self):
+        serializer = PasswordResetRequestSerializer(
+            data={
+                "phone_number": "0912 123 4567",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["phone_number"], "+989121234567")
+
+    def test_rejects_invalid_phone_number(self):
+        serializer = PasswordResetRequestSerializer(
+            data={
+                "phone_number": "12345",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("phone_number", serializer.errors)
+
+
+class PasswordResetConfirmSerializerTests(SimpleTestCase):
+    def test_normalizes_phone_number_and_code(self):
+        serializer = PasswordResetConfirmSerializer(
+            data={
+                "phone_number": "0912 123 4567",
+                "code": " 123456 ",
+                "new_password": "NewStrongPassword123!",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["phone_number"], "+989121234567")
+        self.assertEqual(serializer.validated_data["code"], "123456")
+        self.assertEqual(
+            serializer.validated_data["new_password"],
+            "NewStrongPassword123!",
+        )
+
+    def test_rejects_non_numeric_code(self):
+        serializer = PasswordResetConfirmSerializer(
+            data={
+                "phone_number": "+989121234567",
+                "code": "abc123",
+                "new_password": "NewStrongPassword123!",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
+
+    def test_rejects_code_with_invalid_length(self):
+        serializer = PasswordResetConfirmSerializer(
+            data={
+                "phone_number": "+989121234567",
+                "code": "12345",
+                "new_password": "NewStrongPassword123!",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
+
+
+class PasswordResetResponseSerializerTests(SimpleTestCase):
+    def test_request_response_accepts_optional_development_code(self):
+        serializer = PasswordResetRequestResponseSerializer(
+            data={
+                "detail": "Password reset code has been created.",
+                "expires_at": "2026-01-01T12:00:00Z",
+                "development_otp_code": "123456",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_confirm_response_is_valid(self):
+        serializer = PasswordResetConfirmResponseSerializer(
+            data={
+                "detail": "Password has been reset successfully.",
             }
         )
 
