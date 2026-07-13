@@ -166,3 +166,48 @@ class ChangePasswordSerializer(serializers.Serializer):
             "input_type": "password",
         },
     )
+
+class EmailVerificationRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        write_only=True,
+    )
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+
+class EmailVerificationRequestResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+    development_verification_code = serializers.CharField(
+        required=False,
+    )
+
+
+class EmailVerificationConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        write_only=True,
+    )
+    code = serializers.CharField(
+        max_length=6,
+        write_only=True,
+    )
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+    def validate_code(self, value: str) -> str:
+        normalized_code = value.strip()
+
+        if len(normalized_code) != 6 or not normalized_code.isdigit():
+            raise serializers.ValidationError(
+                "Verification code must be a 6-digit number."
+            )
+
+        return normalized_code
+
+
+class EmailVerificationConfirmResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    email = serializers.EmailField()
+    is_email_verified = serializers.BooleanField()
