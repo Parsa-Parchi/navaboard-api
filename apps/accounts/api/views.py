@@ -3,6 +3,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.accounts.services.email_auth import authenticate_with_email_and_password
+from apps.accounts.services.password_reset import (
+    confirm_password_reset,
+    create_password_reset_challenge,
+)
 from apps.accounts.services.email_verification import (
     create_email_verification_challenge,
     verify_email_challenge,
@@ -12,6 +16,10 @@ from apps.accounts.services.passwords import (
     set_initial_password_for_user,
 )
 from apps.accounts.api.serializers import (
+    PasswordResetConfirmResponseSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestResponseSerializer,
+    PasswordResetRequestSerializer,
     EmailVerificationConfirmResponseSerializer,
     EmailVerificationConfirmSerializer,
     EmailVerificationRequestResponseSerializer,
@@ -312,6 +320,65 @@ class ChangePasswordAPIView(APIView):
             status=status.HTTP_200_OK,
         )
 
+class PasswordResetRequestAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["auth"],
+        request=PasswordResetRequestSerializer,
+        responses={status.HTTP_201_CREATED: PasswordResetRequestResponseSerializer},
+    )
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = create_password_reset_challenge(
+                phone_number=serializer.validated_data["phone_number"],
+                requested_ip=request.META.get("REMOTE_ADDR"),
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        response_data = {
+            "detail": "Password reset code has been created.",
+            "expires_at": result.challenge.expires_at,
+        }
+
+        if settings.OTP_DEVELOPMENT_CODE_IN_RESPONSE:
+            response_data["development_otp_code"] = result.plain_code
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class PasswordResetConfirmAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["auth"],
+        request=PasswordResetConfirmSerializer,
+        responses={status.HTTP_200_OK: PasswordResetConfirmResponseSerializer},
+    )
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            confirm_password_reset(
+                phone_number=serializer.validated_data["phone_number"],
+                plain_code=serializer.validated_data["code"],
+                new_password=serializer.validated_data["new_password"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        return Response(
+            {
+                "detail": "Password has been reset successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
 class EmailVerificationRequestAPIView(APIView):
     @extend_schema(
         tags=["auth"],
@@ -369,3 +436,4 @@ class EmailVerificationConfirmAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
