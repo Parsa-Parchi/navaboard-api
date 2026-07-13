@@ -78,6 +78,20 @@ class EmailVerificationServiceTests(TestCase):
                 email="taken@example.com",
             )
 
+    def test_rejects_email_already_verified_for_current_user(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            email="ali@example.com",
+            is_phone_verified=True,
+            is_email_verified=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            create_email_verification_challenge(
+                user=user,
+                email="ALI@example.com",
+            )
+
     def test_verifies_email_challenge_and_updates_user(self):
         user = User.objects.create_user(
             phone_number="+989121234567",
