@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
+from apps.accounts.services.tokens import issue_auth_token_pair
 from apps.accounts.models import OTPChallenge
 from apps.accounts.services.otp import check_otp_code, create_otp_challenge
 from django.test import override_settings
@@ -448,6 +448,78 @@ class EmailPasswordLoginAPIViewTests(APITestCase):
             data={
                 "email": "ali@example.com",
                 "password": "StrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class SetInitialPasswordAPIViewTests(APITestCase):
+    def test_sets_initial_password_for_authenticated_user(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        verify_url = reverse("accounts-api:otp-verify")
+        set_password_url = reverse("accounts-api:set-password")
+
+        verify_response = self.client.post(
+            verify_url,
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+            },
+            format="json",
+        )
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {verify_response.data['access']}",
+        )
+
+        response = self.client.post(
+            set_password_url,
+            data={
+                "password": "StrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["detail"],
+            "Password has been set successfully.",
+        )
+
+        user = User.objects.get(phone_number="+989121234567")
+        self.assertTrue(user.check_password("StrongPassword123!"))
+
+    def test_rejects_unauthenticated_request(self):
+        url = reverse("accounts-api:set-password")
+
+        response = self.client.post(
+            url,
+            data={
+                "password": "StrongPassword123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_rejects_setting_password_when_password_already_exists(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="StrongPassword123!",
+            is_phone_verified=True,
+        )
+        token_pair = issue_auth_token_pair(user)
+        url = reverse("accounts-api:set-password")
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+
+        response = self.client.post(
+            url,
+            data={
+                "password": "AnotherStrongPassword123!",
             },
             format="json",
         )
