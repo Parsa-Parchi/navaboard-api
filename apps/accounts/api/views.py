@@ -15,7 +15,17 @@ from apps.accounts.services.passwords import (
     change_password_for_user,
     set_initial_password_for_user,
 )
+
+from apps.accounts.services.phone_change import (
+    confirm_phone_change,
+    create_phone_change_challenge,
+)
+
 from apps.accounts.api.serializers import (
+    PhoneChangeConfirmResponseSerializer,
+    PhoneChangeConfirmSerializer,
+    PhoneChangeRequestResponseSerializer,
+    PhoneChangeRequestSerializer,
     PasswordResetConfirmResponseSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestResponseSerializer,
@@ -437,3 +447,60 @@ class EmailVerificationConfirmAPIView(APIView):
             status=status.HTTP_200_OK,
         )
 
+class PhoneChangeRequestAPIView(APIView):
+    @extend_schema(
+        tags=["auth"],
+        request=PhoneChangeRequestSerializer,
+        responses={status.HTTP_201_CREATED: PhoneChangeRequestResponseSerializer},
+    )
+    def post(self, request):
+        serializer = PhoneChangeRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = create_phone_change_challenge(
+                user=request.user,
+                phone_number=serializer.validated_data["phone_number"],
+                requested_ip=request.META.get("REMOTE_ADDR"),
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        response_data = {
+            "detail": "Phone change code has been created.",
+            "expires_at": result.challenge.expires_at,
+        }
+
+        if settings.OTP_DEVELOPMENT_CODE_IN_RESPONSE:
+            response_data["development_otp_code"] = result.plain_code
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class PhoneChangeConfirmAPIView(APIView):
+    @extend_schema(
+        tags=["auth"],
+        request=PhoneChangeConfirmSerializer,
+        responses={status.HTTP_200_OK: PhoneChangeConfirmResponseSerializer},
+    )
+    def post(self, request):
+        serializer = PhoneChangeConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = confirm_phone_change(
+                user=request.user,
+                phone_number=serializer.validated_data["phone_number"],
+                plain_code=serializer.validated_data["code"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        return Response(
+            {
+                "detail": "Phone number has been changed successfully.",
+                "phone_number": result.user.phone_number,
+                "is_phone_verified": result.user.is_phone_verified,
+            },
+            status=status.HTTP_200_OK,
+        )

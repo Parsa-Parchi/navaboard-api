@@ -1,6 +1,8 @@
 from django.urls import path
 
 from apps.accounts.api.views import (
+    PhoneChangeConfirmAPIView,
+    PhoneChangeRequestAPIView,
     PasswordResetConfirmAPIView,
     PasswordResetRequestAPIView,
     EmailVerificationConfirmAPIView,
@@ -43,6 +45,19 @@ urlpatterns = [
         "auth/me/",
         CurrentUserProfileAPIView.as_view(),
         name="me",
+    ),
+
+
+    path(
+    "auth/phone/change/request/",
+    PhoneChangeRequestAPIView.as_view(),
+    name="phone-change-request",
+    ),
+
+    path(
+    "auth/phone/change/confirm/",
+    PhoneChangeConfirmAPIView.as_view(),
+    name="phone-change-confirm",
     ),
 
     path(
