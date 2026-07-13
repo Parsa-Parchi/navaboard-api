@@ -895,3 +895,149 @@ class PasswordResetAPIViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class PhoneChangeAPIViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_authenticated_user_can_request_phone_change_code(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("accounts-api:phone-change-request"),
+            {
+                "phone_number": "0912 444 5566",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            response.data["detail"],
+            "Phone change code has been created.",
+        )
+        self.assertIn("expires_at", response.data)
+        self.assertIn("development_otp_code", response.data)
+
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989124445566",
+            purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+        )
+
+        self.assertEqual(challenge.phone_number, "+989124445566")
+        self.assertEqual(len(response.data["development_otp_code"]), 6)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=False)
+    def test_request_response_hides_development_code_when_disabled(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("accounts-api:phone-change-request"),
+            {
+                "phone_number": "+989124445566",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNotIn("development_otp_code", response.data)
+
+    def test_anonymous_user_cannot_request_phone_change_code(self):
+        response = self.client.post(
+            reverse("accounts-api:phone-change-request"),
+            {
+                "phone_number": "+989124445566",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_authenticated_user_can_confirm_phone_change_code(self):
+        self.client.force_authenticate(user=self.user)
+
+        request_response = self.client.post(
+            reverse("accounts-api:phone-change-request"),
+            {
+                "phone_number": "+989124445566",
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            reverse("accounts-api:phone-change-confirm"),
+            {
+                "phone_number": "0912 444 5566",
+                "code": request_response.data["development_otp_code"],
+            },
+            format="json",
+        )
+
+        self.user.refresh_from_db()
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989124445566",
+            purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["detail"],
+            "Phone number has been changed successfully.",
+        )
+        self.assertEqual(response.data["phone_number"], "+989124445566")
+        self.assertTrue(response.data["is_phone_verified"])
+        self.assertEqual(self.user.phone_number, "+989124445566")
+        self.assertTrue(self.user.is_phone_verified)
+        self.assertIsNotNone(challenge.used_at)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_confirm_rejects_invalid_code(self):
+        self.client.force_authenticate(user=self.user)
+
+        request_response = self.client.post(
+            reverse("accounts-api:phone-change-request"),
+            {
+                "phone_number": "+989124445566",
+            },
+            format="json",
+        )
+
+        valid_code = request_response.data["development_otp_code"]
+        invalid_code = "000000" if valid_code != "000000" else "111111"
+
+        response = self.client.post(
+            reverse("accounts-api:phone-change-confirm"),
+            {
+                "phone_number": "+989124445566",
+                "code": invalid_code,
+            },
+            format="json",
+        )
+
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989124445566",
+            purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(challenge.attempts_count, 1)
+        self.assertIsNone(challenge.used_at)
+
+    def test_anonymous_user_cannot_confirm_phone_change_code(self):
+        response = self.client.post(
+            reverse("accounts-api:phone-change-confirm"),
+            {
+                "phone_number": "+989124445566",
+                "code": "123456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
