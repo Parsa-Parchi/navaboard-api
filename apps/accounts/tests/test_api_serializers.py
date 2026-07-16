@@ -16,12 +16,10 @@ from apps.accounts.api.serializers import (
     ChangePasswordSerializer,
     CurrentUserProfileSerializer,
     EmailPasswordLoginSerializer,
-    LogoutRequestSerializer,
     LogoutResponseSerializer,
     OTPRequestSerializer,
     OTPVerificationSerializer,
     SetInitialPasswordSerializer,
-    TokenRefreshRequestSerializer,
     TokenRefreshResponseSerializer,
 )
 from apps.accounts.models import OTPChallenge
@@ -186,43 +184,24 @@ class OTPVerificationSerializerTests(SimpleTestCase):
 
 
 class AuthSessionSerializerTests(SimpleTestCase):
-    def test_token_refresh_request_accepts_refresh_token(self):
-        serializer = TokenRefreshRequestSerializer(
+    def test_token_refresh_response_is_valid(self):
+        serializer = TokenRefreshResponseSerializer(
             data={
-                "refresh": "refresh-token-value",
+                "access": "access-token-value",
+                "token_type": "Bearer",
             }
         )
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertEqual(
-            serializer.validated_data["refresh"],
-            "refresh-token-value",
-        )
 
-    def test_token_refresh_request_rejects_missing_refresh_token(self):
-        serializer = TokenRefreshRequestSerializer(data={})
-
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("refresh", serializer.errors)
-
-    def test_logout_request_accepts_refresh_token(self):
-        serializer = LogoutRequestSerializer(
+    def test_logout_response_is_valid(self):
+        serializer = LogoutResponseSerializer(
             data={
-                "refresh": "refresh-token-value",
+                "detail": "Logged out successfully.",
             }
         )
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertEqual(
-            serializer.validated_data["refresh"],
-            "refresh-token-value",
-        )
-
-    def test_logout_request_rejects_missing_refresh_token(self):
-        serializer = LogoutRequestSerializer(data={})
-
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("refresh", serializer.errors)
 
 class CurrentUserProfileSerializerTests(TestCase):
     def test_serializes_current_user_profile(self):

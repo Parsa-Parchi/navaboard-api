@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.conf import settings
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from apps.accounts.services.tokens import issue_auth_token_pair
@@ -119,7 +120,9 @@ class OTPVerificationAPIViewTests(APITestCase):
         self.assertEqual(response.data["token_type"], "Bearer")
         self.assertTrue(response.data["user_created"])
         self.assertIn("access", response.data)
-        self.assertIn("refresh", response.data)
+        self.assertNotIn("refresh", response.data)
+        self.assertIn(settings.AUTH_REFRESH_COOKIE_NAME, response.cookies)
+        self.assertTrue(response.cookies[settings.AUTH_REFRESH_COOKIE_NAME].value)
 
         user_data = response.data["user"]
         self.assertEqual(user_data["phone_number"], "+989121234567")
@@ -210,31 +213,34 @@ class AuthSessionAPIViewTests(APITestCase):
             format="json",
         )
 
+        initial_refresh_cookie = verify_response.cookies[
+            settings.AUTH_REFRESH_COOKIE_NAME
+        ].value
+
         response = self.client.post(
             refresh_url,
-            data={
-                "refresh": verify_response.data["refresh"],
-            },
+            data={},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["token_type"], "Bearer")
         self.assertIn("access", response.data)
-        self.assertIn("refresh", response.data)
+        self.assertNotIn("refresh", response.data)
+        self.assertIn(settings.AUTH_REFRESH_COOKIE_NAME, response.cookies)
         self.assertNotEqual(
-            response.data["refresh"],
-            verify_response.data["refresh"],
+            response.cookies[settings.AUTH_REFRESH_COOKIE_NAME].value,
+            initial_refresh_cookie,
         )
 
     def test_rejects_invalid_refresh_token(self):
         url = reverse("accounts-api:token-refresh")
 
+        self.client.cookies[settings.AUTH_REFRESH_COOKIE_NAME] = "invalid-refresh-token"
+
         response = self.client.post(
             url,
-            data={
-                "refresh": "invalid-refresh-token",
-            },
+            data={},
             format="json",
         )
 
@@ -255,11 +261,13 @@ class AuthSessionAPIViewTests(APITestCase):
             format="json",
         )
 
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {verify_response.data['access']}",
+        )
+
         logout_response = self.client.post(
             logout_url,
-            data={
-                "refresh": verify_response.data["refresh"],
-            },
+            data={},
             format="json",
         )
 
@@ -268,12 +276,13 @@ class AuthSessionAPIViewTests(APITestCase):
             logout_response.data["detail"],
             "Logged out successfully.",
         )
+        self.assertIn(settings.AUTH_REFRESH_COOKIE_NAME, logout_response.cookies)
+
+        self.client.credentials()
 
         refresh_response = self.client.post(
             refresh_url,
-            data={
-                "refresh": verify_response.data["refresh"],
-            },
+            data={},
             format="json",
         )
 
@@ -398,7 +407,9 @@ class EmailPasswordLoginAPIViewTests(APITestCase):
         self.assertEqual(response.data["token_type"], "Bearer")
         self.assertFalse(response.data["user_created"])
         self.assertIn("access", response.data)
-        self.assertIn("refresh", response.data)
+        self.assertNotIn("refresh", response.data)
+        self.assertIn(settings.AUTH_REFRESH_COOKIE_NAME, response.cookies)
+        self.assertTrue(response.cookies[settings.AUTH_REFRESH_COOKIE_NAME].value)
         self.assertEqual(str(response.data["user"]["id"]), str(user.id))
         self.assertEqual(response.data["user"]["email"], "ali@example.com")
 

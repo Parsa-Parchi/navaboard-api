@@ -75,27 +75,17 @@ class AuthenticatedUserSerializer(serializers.Serializer):
 
 class OTPVerificationResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
-    refresh = serializers.CharField()
     token_type = serializers.CharField()
     user_created = serializers.BooleanField()
     user = AuthenticatedUserSerializer()
 
-class TokenRefreshRequestSerializer(serializers.Serializer):
-    refresh = serializers.CharField(
-        write_only=True,
-    )
 
 
 class TokenRefreshResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
-    refresh = serializers.CharField()
     token_type = serializers.CharField()
 
 
-class LogoutRequestSerializer(serializers.Serializer):
-    refresh = serializers.CharField(
-        write_only=True,
-    )
 
 
 class LogoutResponseSerializer(serializers.Serializer):
