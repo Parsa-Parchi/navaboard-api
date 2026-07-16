@@ -21,6 +21,10 @@ from apps.accounts.api.serializers import (
     OTPVerificationSerializer,
     SetInitialPasswordSerializer,
     TokenRefreshResponseSerializer,
+    EmailSignupConfirmRequestSerializer,
+    EmailSignupConfirmResponseSerializer,
+    EmailSignupRequestResponseSerializer,
+    EmailSignupRequestSerializer,
 )
 from apps.accounts.models import OTPChallenge
 User = get_user_model()
@@ -315,6 +319,111 @@ class EmailPasswordLoginSerializerTests(SimpleTestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("password", serializer.errors)
+
+
+class EmailSignupSerializerTests(SimpleTestCase):
+    def test_request_validates_email_password_and_full_name(self):
+        serializer = EmailSignupRequestSerializer(
+            data={
+                "email": "ali@example.com",
+                "password": "StrongPassword123!",
+                "full_name": "Ali Test",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["email"], "ali@example.com")
+        self.assertEqual(
+            serializer.validated_data["password"],
+            "StrongPassword123!",
+        )
+        self.assertEqual(serializer.validated_data["full_name"], "Ali Test")
+
+    def test_request_allows_blank_full_name(self):
+        serializer = EmailSignupRequestSerializer(
+            data={
+                "email": "ali@example.com",
+                "password": "StrongPassword123!",
+                "full_name": "",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["full_name"], "")
+
+    def test_request_rejects_invalid_email(self):
+        serializer = EmailSignupRequestSerializer(
+            data={
+                "email": "not-an-email",
+                "password": "StrongPassword123!",
+                "full_name": "Ali Test",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("email", serializer.errors)
+
+    def test_request_rejects_missing_password(self):
+        serializer = EmailSignupRequestSerializer(
+            data={
+                "email": "ali@example.com",
+                "full_name": "Ali Test",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("password", serializer.errors)
+
+    def test_confirm_accepts_email_and_code(self):
+        serializer = EmailSignupConfirmRequestSerializer(
+            data={
+                "email": "ali@example.com",
+                "code": "123456",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["email"], "ali@example.com")
+        self.assertEqual(serializer.validated_data["code"], "123456")
+
+    def test_confirm_rejects_invalid_email(self):
+        serializer = EmailSignupConfirmRequestSerializer(
+            data={
+                "email": "not-an-email",
+                "code": "123456",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("email", serializer.errors)
+
+    def test_request_response_is_valid(self):
+        serializer = EmailSignupRequestResponseSerializer(
+            data={
+                "detail": "Email signup verification code has been generated.",
+                "user_created": True,
+                "development_email_verification_code": "123456",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_confirm_response_is_valid(self):
+        serializer = EmailSignupConfirmResponseSerializer(
+            data={
+                "access": "access-token-value",
+                "token_type": "Bearer",
+                "user": {
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "phone_number": None,
+                    "email": "ali@example.com",
+                    "full_name": "Ali Test",
+                    "is_phone_verified": False,
+                },
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
 class SetInitialPasswordSerializerTests(SimpleTestCase):
     def test_accepts_password(self):

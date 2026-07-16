@@ -11,6 +11,13 @@ from apps.accounts.services.email_verification import (
     create_email_verification_challenge,
     verify_email_challenge,
 )
+
+from apps.accounts.services.email_signup import (
+    confirm_email_signup,
+    create_email_signup_challenge,
+)
+
+
 from apps.accounts.services.passwords import (
     change_password_for_user,
     set_initial_password_for_user,
@@ -43,7 +50,11 @@ from apps.accounts.api.serializers import (
     OTPVerificationResponseSerializer,
     OTPVerificationSerializer,
     SetInitialPasswordSerializer,
-    TokenRefreshResponseSerializer
+    TokenRefreshResponseSerializer,
+    EmailSignupConfirmRequestSerializer,
+    EmailSignupConfirmResponseSerializer,
+    EmailSignupRequestResponseSerializer,
+    EmailSignupRequestSerializer,
 )
 
 from apps.accounts.api.cookies import (
@@ -300,6 +311,101 @@ class EmailPasswordLoginAPIView(APIView):
                 "email": user.email,
                 "full_name": user.full_name,
                 "is_phone_verified": user.is_phone_verified,
+            },
+        }
+
+        response = Response(response_data, status=status.HTTP_200_OK)
+        set_refresh_token_cookie(response, token_pair.refresh)
+
+        return response
+
+
+class EmailSignupRequestAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = EmailSignupRequestSerializer
+
+    @extend_schema(
+        request=EmailSignupRequestSerializer,
+        responses={
+            status.HTTP_201_CREATED: EmailSignupRequestResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = create_email_signup_challenge(
+                email=serializer.validated_data["email"],
+                password=serializer.validated_data["password"],
+                full_name=serializer.validated_data.get("full_name", ""),
+                requested_ip=self._get_client_ip(request),
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        try:
+            send_email_verification_code(
+                email=result.challenge.email,
+                code=result.plain_code,
+            )
+        except NotificationDeliveryError as exc:
+            raise NotificationDeliveryAPIException() from exc
+
+        response_data = {
+            "detail": "Email signup verification code has been generated.",
+            "user_created": result.user_created,
+        }
+
+        if settings.EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE:
+            response_data["development_email_verification_code"] = result.plain_code
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def _get_client_ip(request) -> str | None:
+        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if forwarded_for:
+            return forwarded_for.split(",", maxsplit=1)[0].strip()
+
+        return request.META.get("REMOTE_ADDR")
+
+
+class EmailSignupConfirmAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = EmailSignupConfirmRequestSerializer
+
+    @extend_schema(
+        request=EmailSignupConfirmRequestSerializer,
+        responses={
+            status.HTTP_200_OK: EmailSignupConfirmResponseSerializer,
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = confirm_email_signup(
+                email=serializer.validated_data["email"],
+                plain_code=serializer.validated_data["code"],
+            )
+        except DjangoValidationError as exc:
+            raise DRFValidationError(exc.messages) from exc
+
+        token_pair = issue_auth_token_pair(result.user)
+
+        response_data = {
+            "access": token_pair.access,
+            "token_type": "Bearer",
+            "user": {
+                "id": result.user.id,
+                "phone_number": result.user.phone_number,
+                "email": result.user.email,
+                "full_name": result.user.full_name,
+                "is_phone_verified": result.user.is_phone_verified,
             },
         }
 

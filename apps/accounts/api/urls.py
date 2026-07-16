@@ -15,6 +15,8 @@ from apps.accounts.api.views import (
     OTPVerificationAPIView,
     SetInitialPasswordAPIView,
     TokenRefreshAPIView,
+    EmailSignupRequestAPIView,
+    EmailSignupConfirmAPIView,
 )
 app_name = "accounts-api"
 
@@ -58,6 +60,18 @@ urlpatterns = [
     "auth/phone/change/confirm/",
     PhoneChangeConfirmAPIView.as_view(),
     name="phone-change-confirm",
+    ),
+
+    path(
+    "auth/email/signup/request/",
+    EmailSignupRequestAPIView.as_view(),
+    name="email-signup-request",
+    ),
+
+    path(
+    "auth/email/signup/confirm/",
+    EmailSignupConfirmAPIView.as_view(),
+    name="email-signup-confirm",
     ),
 
     path(
