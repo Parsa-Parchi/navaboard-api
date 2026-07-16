@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.accounts.services.email_auth import authenticate_with_email_and_password
@@ -37,16 +37,22 @@ from apps.accounts.api.serializers import (
     ChangePasswordSerializer,
     CurrentUserProfileSerializer,
     EmailPasswordLoginSerializer,
-    LogoutRequestSerializer,
     LogoutResponseSerializer,
     OTPRequestResponseSerializer,
     OTPRequestSerializer,
     OTPVerificationResponseSerializer,
     OTPVerificationSerializer,
     SetInitialPasswordSerializer,
-    TokenRefreshRequestSerializer,
-    TokenRefreshResponseSerializer,
+    TokenRefreshResponseSerializer
 )
+
+from apps.accounts.api.cookies import (
+    clear_refresh_token_cookie,
+    get_refresh_token_from_cookie,
+    set_refresh_token_cookie,
+)
+
+
 from apps.accounts.services.otp import create_otp_challenge, verify_otp_challenge
 from apps.accounts.services.tokens import (
     blacklist_refresh_token,
@@ -155,7 +161,6 @@ class OTPVerificationAPIView(APIView):
 
         response_data = {
             "access": token_pair.access,
-            "refresh": token_pair.refresh,
             "token_type": "Bearer",
             "user_created": verification_result.user_created,
             "user": {
@@ -167,63 +172,66 @@ class OTPVerificationAPIView(APIView):
             },
         }
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        response = Response(response_data, status=status.HTTP_200_OK)
+        set_refresh_token_cookie(response, token_pair.refresh)
+
+        return response
 
 class TokenRefreshAPIView(APIView):
     permission_classes = [AllowAny]
-    serializer_class = TokenRefreshRequestSerializer
 
     @extend_schema(
-        request=TokenRefreshRequestSerializer,
+        request=None,
         responses={
             status.HTTP_200_OK: TokenRefreshResponseSerializer,
         },
         tags=["auth"],
     )
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        refresh_token = get_refresh_token_from_cookie(request)
 
         try:
-            token_pair = refresh_auth_token_pair(
-                serializer.validated_data["refresh"],
-            )
+            token_pair = refresh_auth_token_pair(refresh_token or "")
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
 
         response_data = {
             "access": token_pair.access,
-            "refresh": token_pair.refresh,
             "token_type": "Bearer",
         }
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        response = Response(response_data, status=status.HTTP_200_OK)
+        set_refresh_token_cookie(response, token_pair.refresh)
 
+        return response
 
 class LogoutAPIView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = LogoutRequestSerializer
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        request=LogoutRequestSerializer,
+        request=None,
         responses={
             status.HTTP_200_OK: LogoutResponseSerializer,
         },
         tags=["auth"],
     )
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        refresh_token = get_refresh_token_from_cookie(request)
 
-        try:
-            blacklist_refresh_token(serializer.validated_data["refresh"])
-        except DjangoValidationError as exc:
-            raise DRFValidationError(exc.messages) from exc
-
-        return Response(
+        response = Response(
             {"detail": "Logged out successfully."},
             status=status.HTTP_200_OK,
         )
+
+        if refresh_token:
+            try:
+                blacklist_refresh_token(refresh_token)
+            except DjangoValidationError:
+                pass
+
+        clear_refresh_token_cookie(response)
+
+        return response
 
 class CurrentUserProfileAPIView(APIView):
     serializer_class = CurrentUserProfileSerializer
@@ -284,7 +292,6 @@ class EmailPasswordLoginAPIView(APIView):
 
         response_data = {
             "access": token_pair.access,
-            "refresh": token_pair.refresh,
             "token_type": "Bearer",
             "user_created": False,
             "user": {
@@ -296,7 +303,10 @@ class EmailPasswordLoginAPIView(APIView):
             },
         }
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        response = Response(response_data, status=status.HTTP_200_OK)
+        set_refresh_token_cookie(response, token_pair.refresh)
+
+        return response
 
 class SetInitialPasswordAPIView(APIView):
     serializer_class = SetInitialPasswordSerializer
