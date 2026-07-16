@@ -132,6 +132,39 @@ class EmailPasswordLoginSerializer(serializers.Serializer):
     def validate_email(self, value: str) -> str:
         return value.strip().lower()
 
+
+class EmailSignupRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+    )
+    full_name = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+    )
+
+
+class EmailSignupRequestResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    user_created = serializers.BooleanField()
+    development_email_verification_code = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+
+
+class EmailSignupConfirmRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField()
+
+
+class EmailSignupConfirmResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    token_type = serializers.CharField()
+    user = AuthenticatedUserSerializer()
+
 class SetInitialPasswordSerializer(serializers.Serializer):
     password = serializers.CharField(
         write_only=True,
