@@ -351,6 +351,33 @@ class CurrentUserProfileAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["full_name"], "Ali Test")
 
+    def test_put_updates_current_user_profile(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            full_name="Old Name",
+        )
+        token_pair = issue_auth_token_pair(user)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+
+        url = reverse("accounts-api:me")
+
+        response = self.client.put(
+            url,
+            data={
+                "full_name": "New Name",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["full_name"], "New Name")
+
+        user.refresh_from_db()
+
+        self.assertEqual(user.full_name, "New Name")
+
     def test_does_not_update_read_only_identity_fields(self):
         request_result = create_otp_challenge(phone_number="09121234567")
         verify_url = reverse("accounts-api:otp-verify")
@@ -385,6 +412,8 @@ class CurrentUserProfileAPIViewTests(APITestCase):
         self.assertIsNone(response.data["email"])
         self.assertTrue(response.data["is_phone_verified"])
         self.assertEqual(response.data["full_name"], "Ali Updated")
+
+
 class EmailPasswordLoginAPIViewTests(APITestCase):
     def test_logs_in_verified_user_with_email_and_password(self):
         user = User.objects.create_user(
