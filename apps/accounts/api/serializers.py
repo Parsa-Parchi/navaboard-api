@@ -154,10 +154,16 @@ class EmailSignupRequestSerializer(serializers.Serializer):
         allow_blank=True,
     )
 
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+    def validate_full_name(self, value: str) -> str:
+        return value.strip()
+
 
 class EmailSignupRequestResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
-    user_created = serializers.BooleanField()
+    expires_at = serializers.DateTimeField()
     development_email_verification_code = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -167,6 +173,19 @@ class EmailSignupRequestResponseSerializer(serializers.Serializer):
 class EmailSignupConfirmRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField()
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+    def validate_code(self, value: str) -> str:
+        normalized_code = value.strip()
+
+        if len(normalized_code) != 6 or not normalized_code.isdigit():
+            raise serializers.ValidationError(
+                "Verification code must be a 6-digit number."
+            )
+
+        return normalized_code
 
 
 class EmailSignupConfirmResponseSerializer(serializers.Serializer):

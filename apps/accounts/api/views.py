@@ -362,7 +362,7 @@ class EmailSignupRequestAPIView(APIView):
                 email=serializer.validated_data["email"],
                 password=serializer.validated_data["password"],
                 full_name=serializer.validated_data.get("full_name", ""),
-                requested_ip=self._get_client_ip(request),
+                requested_ip=get_client_ip(request),
             )
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
@@ -377,22 +377,13 @@ class EmailSignupRequestAPIView(APIView):
 
         response_data = {
             "detail": "Email signup verification code has been generated.",
-            "user_created": result.user_created,
+            "expires_at": result.challenge.expires_at,
         }
 
         if settings.EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE:
             response_data["development_email_verification_code"] = result.plain_code
 
         return Response(response_data, status=status.HTTP_201_CREATED)
-
-    @staticmethod
-    def _get_client_ip(request) -> str | None:
-        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if forwarded_for:
-            return forwarded_for.split(",", maxsplit=1)[0].strip()
-
-        return request.META.get("REMOTE_ADDR")
-
 
 class EmailSignupConfirmAPIView(APIView):
     permission_classes = [AllowAny]

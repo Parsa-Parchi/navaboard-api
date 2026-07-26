@@ -304,9 +304,9 @@ class EmailSignupSerializerTests(SimpleTestCase):
     def test_request_validates_email_password_and_full_name(self):
         serializer = EmailSignupRequestSerializer(
             data={
-                "email": "ali@example.com",
+                "email": "  Ali@Example.COM  ",
                 "password": "StrongPassword123!",
-                "full_name": "Ali Test",
+                "full_name": "  Ali Test  ",
             }
         )
 
@@ -356,14 +356,25 @@ class EmailSignupSerializerTests(SimpleTestCase):
     def test_confirm_accepts_email_and_code(self):
         serializer = EmailSignupConfirmRequestSerializer(
             data={
-                "email": "ali@example.com",
-                "code": "123456",
+                "email": "  Ali@Example.COM  ",
+                "code": " 123456 ",
             }
         )
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.validated_data["email"], "ali@example.com")
         self.assertEqual(serializer.validated_data["code"], "123456")
+
+    def test_confirm_rejects_invalid_code(self):
+        serializer = EmailSignupConfirmRequestSerializer(
+            data={
+                "email": "ali@example.com",
+                "code": "abc123",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("code", serializer.errors)
 
     def test_confirm_rejects_invalid_email(self):
         serializer = EmailSignupConfirmRequestSerializer(
@@ -380,7 +391,7 @@ class EmailSignupSerializerTests(SimpleTestCase):
         serializer = EmailSignupRequestResponseSerializer(
             data={
                 "detail": "Email signup verification code has been generated.",
-                "user_created": True,
+                "expires_at": "2026-01-01T12:00:00Z",
                 "development_email_verification_code": "123456",
             }
         )

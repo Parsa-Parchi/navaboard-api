@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import EmailVerificationChallenge, OTPChallenge, User
+from .models import (
+    EmailSignupChallenge,
+    EmailVerificationChallenge,
+    OTPChallenge,
+    User,
+)
 
 
 @admin.register(User)
@@ -188,6 +193,49 @@ class EmailVerificationChallengeAdmin(admin.ModelAdmin):
         "id",
         "user",
         "email",
+        "code_hash",
+        "expires_at",
+        "attempts_count",
+        "max_attempts",
+        "used_at",
+        "revoked_at",
+        "requested_ip",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(EmailSignupChallenge)
+class EmailSignupChallengeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "email",
+        "expires_at",
+        "attempts_count",
+        "max_attempts",
+        "used_at",
+        "revoked_at",
+        "created_at",
+    )
+    list_filter = (
+        "created_at",
+        "expires_at",
+        "used_at",
+        "revoked_at",
+    )
+    search_fields = (
+        "id",
+        "email",
+        "requested_ip",
+    )
+    ordering = ("-created_at",)
+    readonly_fields = (
+        "id",
+        "email",
+        "full_name",
+        "password_hash",
         "code_hash",
         "expires_at",
         "attempts_count",

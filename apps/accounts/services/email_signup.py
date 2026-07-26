@@ -3,13 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.utils import timezone
 
-from apps.accounts.models import EmailVerificationChallenge
+from apps.accounts.models import EmailSignupChallenge
 from apps.accounts.services.email_verification import (
-    create_email_verification_challenge,
-    verify_email_challenge,
+    EMAIL_VERIFICATION_CODE_LIFETIME,
+)
+from apps.accounts.services.otp import (
+    check_otp_code,
+    generate_numeric_otp_code,
+    hash_otp_code,
 )
 
 User = get_user_model()
@@ -17,10 +24,8 @@ User = get_user_model()
 
 @dataclass(frozen=True)
 class EmailSignupRequestResult:
-    user: User
-    challenge: EmailVerificationChallenge
+    challenge: EmailSignupChallenge
     plain_code: str
-    user_created: bool
 
 
 @dataclass(frozen=True)
@@ -44,50 +49,44 @@ def create_email_signup_challenge(
     if not password:
         raise ValidationError("Password is required.")
 
-    existing_user = User.objects.filter(email__iexact=normalized_email).first()
-
-    if existing_user and existing_user.is_email_verified:
+    if User.objects.filter(email__iexact=normalized_email).exists():
         raise ValidationError("Email address is already registered.")
 
-    if existing_user:
-        user = existing_user
-        validate_password(password, user=user)
-        user.full_name = normalized_full_name
-        user.set_password(password)
-        user.is_active = True
-        user.save(
-            update_fields=[
-                "full_name",
-                "password",
-                "is_active",
-                "updated_at",
-            ]
-        )
-        user_created = False
-    else:
-        user = User(
-            email=normalized_email,
-            full_name=normalized_full_name,
-            is_email_verified=False,
-            is_active=True,
-        )
-        validate_password(password, user=user)
-        user.set_password(password)
-        user.full_clean()
-        user.save()
-        user_created = True
-
-    challenge_result = create_email_verification_challenge(
-        user=user,
+    prospective_user = User(
         email=normalized_email,
-        requested_ip=requested_ip,
+        full_name=normalized_full_name,
     )
+    validate_password(password, user=prospective_user)
+    now = timezone.now()
+
+    try:
+        with transaction.atomic():
+            EmailSignupChallenge.objects.filter(
+                email__iexact=normalized_email,
+                used_at__isnull=True,
+                revoked_at__isnull=True,
+            ).update(
+                revoked_at=now,
+                password_hash="",
+            )
+
+            plain_code = generate_numeric_otp_code()
+            challenge = EmailSignupChallenge.objects.create(
+                email=normalized_email,
+                full_name=normalized_full_name,
+                password_hash=make_password(password),
+                code_hash=hash_otp_code(plain_code),
+                expires_at=now + EMAIL_VERIFICATION_CODE_LIFETIME,
+                requested_ip=requested_ip,
+            )
+    except IntegrityError as exc:
+        raise ValidationError(
+            "An email signup request is already being processed."
+        ) from exc
 
     return EmailSignupRequestResult(
-        user=user,
-        challenge=challenge_result.challenge,
-        plain_code=challenge_result.plain_code,
-        user_created=user_created,
+        challenge=challenge,
+        plain_code=plain_code,
     )
 
 
@@ -101,18 +100,66 @@ def confirm_email_signup(
     if not normalized_email:
         raise ValidationError("Email address is required.")
 
-    user = User.objects.filter(email__iexact=normalized_email).first()
+    submitted_code = plain_code.strip()
 
-    if user is None:
-        raise ValidationError("Email signup request was not found.")
+    if not submitted_code:
+        raise ValidationError("Verification code is required.")
 
-    if user.is_email_verified:
-        raise ValidationError("Email address is already verified.")
+    invalid_code_submitted = False
 
-    result = verify_email_challenge(
-        user=user,
-        email=normalized_email,
-        plain_code=plain_code,
-    )
+    try:
+        with transaction.atomic():
+            challenge = (
+                EmailSignupChallenge.objects.select_for_update()
+                .filter(
+                    email__iexact=normalized_email,
+                    used_at__isnull=True,
+                    revoked_at__isnull=True,
+                )
+                .order_by("-created_at")
+                .first()
+            )
 
-    return EmailSignupConfirmResult(user=result.user)
+            if challenge is None:
+                raise ValidationError("Email signup request was not found.")
+
+            if challenge.is_expired:
+                raise ValidationError(
+                    "Email signup verification code has expired."
+                )
+
+            if not challenge.has_attempts_remaining:
+                raise ValidationError(
+                    "Email signup challenge has no attempts remaining."
+                )
+
+            if not check_otp_code(submitted_code, challenge.code_hash):
+                challenge.attempts_count += 1
+                challenge.save(update_fields=["attempts_count"])
+                invalid_code_submitted = True
+            else:
+                if User.objects.filter(
+                    email__iexact=normalized_email,
+                ).exists():
+                    raise ValidationError("Email address is already registered.")
+
+                user = User(
+                    email=normalized_email,
+                    full_name=challenge.full_name,
+                    is_email_verified=True,
+                    is_active=True,
+                    password=challenge.password_hash,
+                )
+                user.full_clean()
+                user.save()
+
+                challenge.used_at = timezone.now()
+                challenge.password_hash = ""
+                challenge.save(update_fields=["used_at", "password_hash"])
+    except IntegrityError as exc:
+        raise ValidationError("Email address is already registered.") from exc
+
+    if invalid_code_submitted:
+        raise ValidationError("Invalid email signup verification code.")
+
+    return EmailSignupConfirmResult(user=user)

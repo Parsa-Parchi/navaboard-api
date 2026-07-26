@@ -13,7 +13,11 @@ from apps.accounts.api.throttles import (
     OTPVerificationIPThrottle,
     OTPVerificationPhoneThrottle,
 )
-from apps.accounts.models import EmailVerificationChallenge, OTPChallenge
+from apps.accounts.models import (
+    EmailSignupChallenge,
+    EmailVerificationChallenge,
+    OTPChallenge,
+)
 from apps.accounts.services.otp import check_otp_code, create_otp_challenge
 from apps.accounts.services.tokens import issue_auth_token_pair
 
@@ -642,7 +646,7 @@ class EmailPasswordLoginAPIViewTests(APITestCase):
 
 class EmailSignupAPIViewTests(APITestCase):
     @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
-    def test_requests_email_signup_code_and_creates_unverified_user(self):
+    def test_requests_email_signup_code_without_creating_user(self):
         url = reverse("accounts-api:email-signup-request")
 
         response = self.client.post(
@@ -660,19 +664,14 @@ class EmailSignupAPIViewTests(APITestCase):
             response.data["detail"],
             "Email signup verification code has been generated.",
         )
-        self.assertTrue(response.data["user_created"])
+        self.assertIn("expires_at", response.data)
         self.assertIn("development_email_verification_code", response.data)
+        self.assertFalse(User.objects.exists())
 
-        user = User.objects.get(email="ali@example.com")
+        challenge = EmailSignupChallenge.objects.get()
 
-        self.assertEqual(user.full_name, "Ali Test")
-        self.assertFalse(user.is_email_verified)
-        self.assertTrue(user.check_password("StrongPassword123!"))
-
-        challenge = EmailVerificationChallenge.objects.get()
-
-        self.assertEqual(challenge.user, user)
         self.assertEqual(challenge.email, "ali@example.com")
+        self.assertEqual(challenge.full_name, "Ali Test")
         self.assertIsNone(challenge.used_at)
         self.assertIsNone(challenge.revoked_at)
 
@@ -733,16 +732,17 @@ class EmailSignupAPIViewTests(APITestCase):
 
         self.assertTrue(user.is_email_verified)
 
-        challenge = EmailVerificationChallenge.objects.get()
+        challenge = EmailSignupChallenge.objects.get()
 
         self.assertIsNotNone(challenge.used_at)
+        self.assertEqual(challenge.password_hash, "")
 
     @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
     def test_rejects_invalid_email_signup_code(self):
         request_url = reverse("accounts-api:email-signup-request")
         confirm_url = reverse("accounts-api:email-signup-confirm")
 
-        self.client.post(
+        request_response = self.client.post(
             request_url,
             data={
                 "email": "ali@example.com",
@@ -752,20 +752,23 @@ class EmailSignupAPIViewTests(APITestCase):
             format="json",
         )
 
+        valid_code = request_response.data[
+            "development_email_verification_code"
+        ]
+        invalid_code = "000000" if valid_code != "000000" else "111111"
+
         response = self.client.post(
             confirm_url,
             data={
                 "email": "ali@example.com",
-                "code": "000000",
+                "code": invalid_code,
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.get(email="ali@example.com")
-
-        self.assertFalse(user.is_email_verified)
+        self.assertFalse(User.objects.exists())
 
     def test_rejects_already_verified_email(self):
         user = User(
@@ -790,10 +793,10 @@ class EmailSignupAPIViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(EmailVerificationChallenge.objects.count(), 0)
+        self.assertEqual(EmailSignupChallenge.objects.count(), 0)
 
     @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
-    def test_reissues_code_for_unverified_existing_email_signup(self):
+    def test_reissues_code_without_persisting_unverified_user_data(self):
         url = reverse("accounts-api:email-signup-request")
 
         first_response = self.client.post(
@@ -818,18 +821,59 @@ class EmailSignupAPIViewTests(APITestCase):
 
         self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
-        self.assertFalse(second_response.data["user_created"])
+        self.assertFalse(User.objects.exists())
+
+        challenges = EmailSignupChallenge.objects.order_by("created_at")
+
+        self.assertEqual(challenges.count(), 2)
+        self.assertIsNotNone(challenges[0].revoked_at)
+        self.assertEqual(challenges[0].password_hash, "")
+        self.assertIsNone(challenges[1].revoked_at)
+
+        confirm_response = self.client.post(
+            reverse("accounts-api:email-signup-confirm"),
+            data={
+                "email": "ali@example.com",
+                "code": second_response.data[
+                    "development_email_verification_code"
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
         user = User.objects.get(email="ali@example.com")
 
         self.assertEqual(user.full_name, "Ali Updated")
         self.assertTrue(user.check_password("NewStrongPassword123!"))
 
-        challenges = EmailVerificationChallenge.objects.order_by("created_at")
+    def test_does_not_reactivate_inactive_existing_account(self):
+        user = User.objects.create_user(
+            email="ali@example.com",
+            password="OriginalStrongPassword123!",
+            full_name="Original Name",
+            is_email_verified=False,
+            is_active=False,
+        )
 
-        self.assertEqual(challenges.count(), 2)
-        self.assertIsNotNone(challenges[0].revoked_at)
-        self.assertIsNone(challenges[1].revoked_at)
+        response = self.client.post(
+            reverse("accounts-api:email-signup-request"),
+            data={
+                "email": "ali@example.com",
+                "password": "AttackerStrongPassword123!",
+                "full_name": "Attacker Name",
+            },
+            format="json",
+        )
+
+        user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(user.is_active)
+        self.assertEqual(user.full_name, "Original Name")
+        self.assertTrue(user.check_password("OriginalStrongPassword123!"))
+        self.assertFalse(EmailSignupChallenge.objects.exists())
 
 
 class SetInitialPasswordAPIViewTests(APITestCase):

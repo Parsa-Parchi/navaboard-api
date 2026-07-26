@@ -345,3 +345,131 @@ class EmailVerificationChallenge(models.Model):
 
     def __str__(self) -> str:
         return f"{self.email} - {self.user_id}"
+
+
+class EmailSignupChallenge(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    email = models.EmailField(
+        db_index=True,
+    )
+
+    full_name = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    password_hash = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    code_hash = models.CharField(
+        max_length=255,
+    )
+
+    expires_at = models.DateTimeField(
+        db_index=True,
+    )
+
+    attempts_count = models.PositiveSmallIntegerField(
+        default=0,
+    )
+
+    max_attempts = models.PositiveSmallIntegerField(
+        default=5,
+    )
+
+    used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    revoked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    requested_ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["email", "created_at"],
+                name="email_signup_email_created_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(email=""),
+                name="email_signup_email_not_blank",
+            ),
+            models.CheckConstraint(
+                condition=~Q(code_hash=""),
+                name="email_signup_code_not_blank",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_attempts__gte=1),
+                name="email_signup_attempts_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(attempts_count__lte=F("max_attempts")),
+                name="email_signup_attempts_lte_max",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~Q(password_hash="")
+                    | Q(used_at__isnull=False)
+                    | Q(revoked_at__isnull=False)
+                ),
+                name="email_signup_active_has_pwd",
+            ),
+            models.UniqueConstraint(
+                Lower("email"),
+                condition=Q(
+                    used_at__isnull=True,
+                    revoked_at__isnull=True,
+                ),
+                name="email_signup_one_active",
+            ),
+        ]
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+    @property
+    def is_revoked(self) -> bool:
+        return self.revoked_at is not None
+
+    @property
+    def has_attempts_remaining(self) -> bool:
+        return self.attempts_count < self.max_attempts
+
+    @property
+    def can_be_verified(self) -> bool:
+        return (
+            not self.is_expired
+            and not self.is_used
+            and not self.is_revoked
+            and self.has_attempts_remaining
+        )
+
+    def __str__(self) -> str:
+        return self.email
