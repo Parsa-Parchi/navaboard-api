@@ -1,12 +1,21 @@
-from django.urls import reverse
+from unittest.mock import patch
+
 from django.conf import settings
+from django.core.cache import cache
+from django.test import TestCase, override_settings
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from apps.accounts.services.tokens import issue_auth_token_pair
-from apps.accounts.models import OTPChallenge
-from apps.accounts.services.otp import check_otp_code, create_otp_challenge
-from django.test import TestCase, override_settings
+
+from apps.accounts.api.throttles import (
+    OTPRequestIPThrottle,
+    OTPRequestPhoneThrottle,
+    OTPVerificationIPThrottle,
+    OTPVerificationPhoneThrottle,
+)
 from apps.accounts.models import EmailVerificationChallenge, OTPChallenge
+from apps.accounts.services.otp import check_otp_code, create_otp_challenge
+from apps.accounts.services.tokens import issue_auth_token_pair
 
 
 from django.contrib.auth import get_user_model
@@ -15,6 +24,9 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class OTPRequestAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
 
     @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
     def test_requests_otp_code(self):
@@ -37,6 +49,7 @@ class OTPRequestAPIViewTests(APITestCase):
 
         self.assertEqual(challenge.phone_number, "+989121234567")
         self.assertEqual(challenge.purpose, OTPChallenge.Purpose.LOGIN)
+        self.assertEqual(challenge.requested_ip, "127.0.0.1")
         self.assertTrue(
             check_otp_code(
                 response.data["development_otp_code"],
@@ -57,6 +70,74 @@ class OTPRequestAPIViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("phone_number", response.data)
+
+    def test_rejects_client_supplied_purpose(self):
+        response = self.client.post(
+            reverse("accounts-api:otp-request"),
+            data={
+                "phone_number": "09121234567",
+                "purpose": OTPChallenge.Purpose.PASSWORD_RESET,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("purpose", response.data)
+        self.assertFalse(OTPChallenge.objects.exists())
+
+    @patch.object(OTPRequestIPThrottle, "rate", "100/minute", create=True)
+    @patch.object(OTPRequestPhoneThrottle, "rate", "2/minute", create=True)
+    def test_throttles_repeated_requests_for_same_phone_number(self):
+        url = reverse("accounts-api:otp-request")
+
+        responses = [
+            self.client.post(
+                url,
+                data={"phone_number": "09121234567"},
+                format="json",
+            )
+            for _ in range(3)
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_201_CREATED,
+                status.HTTP_201_CREATED,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
+        self.assertEqual(OTPChallenge.objects.count(), 2)
+        self.assertIn("Retry-After", responses[-1])
+
+    @patch.object(OTPRequestIPThrottle, "rate", "2/minute", create=True)
+    @patch.object(OTPRequestPhoneThrottle, "rate", "100/minute", create=True)
+    def test_throttles_by_remote_ip_and_ignores_spoofed_forwarded_for(self):
+        url = reverse("accounts-api:otp-request")
+        phone_numbers = [
+            "09120000001",
+            "09120000002",
+            "09120000003",
+        ]
+
+        responses = [
+            self.client.post(
+                url,
+                data={"phone_number": phone_number},
+                format="json",
+                HTTP_X_FORWARDED_FOR=f"203.0.113.{index}",
+            )
+            for index, phone_number in enumerate(phone_numbers, start=1)
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_201_CREATED,
+                status.HTTP_201_CREATED,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
 
     def test_revokes_previous_active_challenge(self):
         url = reverse("accounts-api:otp-request")
@@ -103,6 +184,10 @@ class OTPRequestAPIViewTests(APITestCase):
 
 
 class OTPVerificationAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
     def test_verifies_otp_and_returns_tokens_for_new_user(self):
         request_result = create_otp_challenge(phone_number="09121234567")
         url = reverse("accounts-api:otp-verify")
@@ -183,6 +268,62 @@ class OTPVerificationAPIViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rejects_client_supplied_purpose(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+
+        response = self.client.post(
+            reverse("accounts-api:otp-verify"),
+            data={
+                "phone_number": "09121234567",
+                "code": request_result.plain_code,
+                "purpose": OTPChallenge.Purpose.PASSWORD_RESET,
+            },
+            format="json",
+        )
+
+        request_result.challenge.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("purpose", response.data)
+        self.assertIsNone(request_result.challenge.used_at)
+
+    @patch.object(OTPVerificationIPThrottle, "rate", "100/minute", create=True)
+    @patch.object(
+        OTPVerificationPhoneThrottle,
+        "rate",
+        "2/minute",
+        create=True,
+    )
+    def test_throttles_repeated_verification_attempts_for_same_phone_number(self):
+        request_result = create_otp_challenge(phone_number="09121234567")
+        invalid_code = (
+            "000000"
+            if request_result.plain_code != "000000"
+            else "111111"
+        )
+        url = reverse("accounts-api:otp-verify")
+
+        responses = [
+            self.client.post(
+                url,
+                data={
+                    "phone_number": "09121234567",
+                    "code": invalid_code,
+                },
+                format="json",
+            )
+            for _ in range(3)
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
 
     def test_rejects_missing_active_challenge(self):
         url = reverse("accounts-api:otp-verify")

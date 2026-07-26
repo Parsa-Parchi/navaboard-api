@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
@@ -5,12 +7,13 @@ from django.utils import timezone
 from apps.accounts.models import OTPChallenge
 from apps.accounts.services.otp import (
     check_otp_code,
+    create_login_otp_challenge,
     create_otp_challenge,
     generate_numeric_otp_code,
     hash_otp_code,
+    verify_login_otp_challenge,
     verify_otp_challenge,
 )
-from datetime import timedelta
 
 
 class OTPServiceTests(TestCase):
@@ -50,6 +53,29 @@ class OTPServiceTests(TestCase):
         self.assertNotEqual(challenge.code_hash, result.plain_code)
         self.assertTrue(check_otp_code(result.plain_code, challenge.code_hash))
         self.assertGreater(challenge.expires_at, before_creation)
+
+    def test_login_wrapper_always_creates_login_challenge(self):
+        result = create_login_otp_challenge(
+            phone_number="09121234567",
+            requested_ip="127.0.0.1",
+        )
+
+        self.assertEqual(result.challenge.purpose, OTPChallenge.Purpose.LOGIN)
+
+    def test_login_wrapper_does_not_verify_other_challenge_purposes(self):
+        password_reset_result = create_otp_challenge(
+            phone_number="09121234567",
+            purpose=OTPChallenge.Purpose.PASSWORD_RESET,
+        )
+
+        with self.assertRaises(ValidationError):
+            verify_login_otp_challenge(
+                phone_number="09121234567",
+                plain_code=password_reset_result.plain_code,
+            )
+
+        password_reset_result.challenge.refresh_from_db()
+        self.assertIsNone(password_reset_result.challenge.used_at)
 
     def test_revokes_previous_active_challenge_for_same_phone_and_purpose(self):
         first_result = create_otp_challenge(phone_number="09121234567")

@@ -50,6 +50,7 @@ from apps.accounts.api.serializers import (
     OTPVerificationResponseSerializer,
     OTPVerificationSerializer,
     SetInitialPasswordSerializer,
+    ThrottledResponseSerializer,
     TokenRefreshResponseSerializer,
     EmailSignupConfirmRequestSerializer,
     EmailSignupConfirmResponseSerializer,
@@ -62,9 +63,19 @@ from apps.accounts.api.cookies import (
     get_refresh_token_from_cookie,
     set_refresh_token_cookie,
 )
+from apps.accounts.api.throttles import (
+    OTPRequestIPThrottle,
+    OTPRequestPhoneThrottle,
+    OTPVerificationIPThrottle,
+    OTPVerificationPhoneThrottle,
+    get_client_ip,
+)
 
 
-from apps.accounts.services.otp import create_otp_challenge, verify_otp_challenge
+from apps.accounts.services.otp import (
+    create_login_otp_challenge,
+    verify_login_otp_challenge,
+)
 from apps.accounts.services.tokens import (
     blacklist_refresh_token,
     issue_auth_token_pair,
@@ -96,11 +107,13 @@ class NotificationDeliveryAPIException(APIException):
 class OTPRequestAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = OTPRequestSerializer
+    throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
 
     @extend_schema(
         request=OTPRequestSerializer,
         responses={
             status.HTTP_201_CREATED: OTPRequestResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -109,10 +122,9 @@ class OTPRequestAPIView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        result = create_otp_challenge(
+        result = create_login_otp_challenge(
             phone_number=serializer.validated_data["phone_number"],
-            purpose=serializer.validated_data["purpose"],
-            requested_ip=self._get_client_ip(request),
+            requested_ip=get_client_ip(request),
         )
 
         try:
@@ -135,23 +147,17 @@ class OTPRequestAPIView(APIView):
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
-    @staticmethod
-    def _get_client_ip(request) -> str | None:
-        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if forwarded_for:
-            return forwarded_for.split(",", maxsplit=1)[0].strip()
-
-        return request.META.get("REMOTE_ADDR")
-
 
 class OTPVerificationAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = OTPVerificationSerializer
+    throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
 
     @extend_schema(
         request=OTPVerificationSerializer,
         responses={
             status.HTTP_200_OK: OTPVerificationResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -160,10 +166,9 @@ class OTPVerificationAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            verification_result = verify_otp_challenge(
+            verification_result = verify_login_otp_challenge(
                 phone_number=serializer.validated_data["phone_number"],
                 plain_code=serializer.validated_data["code"],
-                purpose=serializer.validated_data["purpose"],
             )
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc

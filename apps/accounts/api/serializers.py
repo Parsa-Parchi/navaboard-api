@@ -1,19 +1,28 @@
 from rest_framework import serializers
 
-from apps.accounts.models import OTPChallenge
 from apps.accounts.phone_numbers import normalize_iranian_mobile_number
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class OTPRequestSerializer(serializers.Serializer):
+
+class PublicOTPSerializerMixin:
+    def validate(self, attrs):
+        if "purpose" in self.initial_data:
+            raise serializers.ValidationError(
+                {
+                    "purpose": (
+                        "Purpose is determined by the endpoint and cannot be supplied."
+                    )
+                }
+            )
+
+        return super().validate(attrs)
+
+
+class OTPRequestSerializer(PublicOTPSerializerMixin, serializers.Serializer):
     phone_number = serializers.CharField(
         max_length=32,
-        write_only=True,
-    )
-    purpose = serializers.ChoiceField(
-        choices=OTPChallenge.Purpose.choices,
-        default=OTPChallenge.Purpose.LOGIN,
         write_only=True,
     )
 
@@ -33,18 +42,18 @@ class OTPRequestResponseSerializer(serializers.Serializer):
         required=False,
     )
 
-class OTPVerificationSerializer(serializers.Serializer):
+
+class ThrottledResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+class OTPVerificationSerializer(PublicOTPSerializerMixin, serializers.Serializer):
     phone_number = serializers.CharField(
         max_length=32,
         write_only=True,
     )
     code = serializers.CharField(
         max_length=6,
-        write_only=True,
-    )
-    purpose = serializers.ChoiceField(
-        choices=OTPChallenge.Purpose.choices,
-        default=OTPChallenge.Purpose.LOGIN,
         write_only=True,
     )
 

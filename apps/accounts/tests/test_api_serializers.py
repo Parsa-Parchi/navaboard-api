@@ -26,7 +26,6 @@ from apps.accounts.api.serializers import (
     EmailSignupRequestResponseSerializer,
     EmailSignupRequestSerializer,
 )
-from apps.accounts.models import OTPChallenge
 User = get_user_model()
 
 class OTPRequestSerializerTests(SimpleTestCase):
@@ -42,28 +41,18 @@ class OTPRequestSerializerTests(SimpleTestCase):
             serializer.validated_data["phone_number"],
             "+989121234567",
         )
-        self.assertEqual(
-            serializer.validated_data["purpose"],
-            OTPChallenge.Purpose.LOGIN,
-        )
+        self.assertNotIn("purpose", serializer.validated_data)
 
-    def test_accepts_supported_purpose(self):
+    def test_rejects_supported_purpose_from_public_request(self):
         serializer = OTPRequestSerializer(
             data={
                 "phone_number": "۰۹۱۲۱۲۳۴۵۶۷",
-                "purpose": OTPChallenge.Purpose.VERIFY_PHONE,
+                "purpose": "login",
             }
         )
 
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertEqual(
-            serializer.validated_data["phone_number"],
-            "+989121234567",
-        )
-        self.assertEqual(
-            serializer.validated_data["purpose"],
-            OTPChallenge.Purpose.VERIFY_PHONE,
-        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("purpose", serializer.errors)
 
     def test_rejects_invalid_phone_number(self):
         serializer = OTPRequestSerializer(
@@ -107,29 +96,19 @@ class OTPVerificationSerializerTests(SimpleTestCase):
             "+989121234567",
         )
         self.assertEqual(serializer.validated_data["code"], "123456")
-        self.assertEqual(
-            serializer.validated_data["purpose"],
-            OTPChallenge.Purpose.LOGIN,
-        )
+        self.assertNotIn("purpose", serializer.validated_data)
 
-    def test_accepts_supported_purpose(self):
+    def test_rejects_supported_purpose_from_public_verification(self):
         serializer = OTPVerificationSerializer(
             data={
                 "phone_number": "۰۹۱۲۱۲۳۴۵۶۷",
                 "code": "123456",
-                "purpose": OTPChallenge.Purpose.VERIFY_PHONE,
+                "purpose": "login",
             }
         )
 
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertEqual(
-            serializer.validated_data["phone_number"],
-            "+989121234567",
-        )
-        self.assertEqual(
-            serializer.validated_data["purpose"],
-            OTPChallenge.Purpose.VERIFY_PHONE,
-        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("purpose", serializer.errors)
 
     def test_rejects_invalid_phone_number(self):
         serializer = OTPVerificationSerializer(

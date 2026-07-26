@@ -83,6 +83,19 @@ def create_otp_challenge(
         plain_code=plain_code,
     )
 
+
+def create_login_otp_challenge(
+    *,
+    phone_number: str,
+    requested_ip: str | None = None,
+) -> OTPChallengeRequestResult:
+    return create_otp_challenge(
+        phone_number=phone_number,
+        purpose=OTPChallenge.Purpose.LOGIN,
+        requested_ip=requested_ip,
+    )
+
+
 def verify_otp_challenge(
     *,
     phone_number: str,
@@ -158,4 +171,16 @@ def verify_otp_challenge(
         challenge=challenge,
         user=user,
         user_created=user_created,
+    )
+
+
+def verify_login_otp_challenge(
+    *,
+    phone_number: str,
+    plain_code: str,
+) -> OTPVerificationResult:
+    return verify_otp_challenge(
+        phone_number=phone_number,
+        plain_code=plain_code,
+        purpose=OTPChallenge.Purpose.LOGIN,
     )

@@ -90,6 +90,13 @@ DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
 
+CACHES = {
+    "default": env.cache(
+        "CACHE_URL",
+        default="locmemcache://navaboard",
+    ),
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -98,6 +105,13 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_RATES": {
+        "otp_request_ip": env("OTP_REQUEST_IP_RATE", default="20/hour"),
+        "otp_request_phone": env("OTP_REQUEST_PHONE_RATE", default="3/minute"),
+        "otp_verify_ip": env("OTP_VERIFY_IP_RATE", default="60/hour"),
+        "otp_verify_phone": env("OTP_VERIFY_PHONE_RATE", default="10/minute"),
+    },
+    "NUM_PROXIES": env.int("DRF_NUM_PROXIES", default=0),
 }
 
 SIMPLE_JWT = {
