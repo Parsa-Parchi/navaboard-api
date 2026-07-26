@@ -110,6 +110,32 @@ REST_FRAMEWORK = {
         "otp_request_phone": env("OTP_REQUEST_PHONE_RATE", default="3/minute"),
         "otp_verify_ip": env("OTP_VERIFY_IP_RATE", default="60/hour"),
         "otp_verify_phone": env("OTP_VERIFY_PHONE_RATE", default="10/minute"),
+        "email_code_request_ip": env(
+            "EMAIL_CODE_REQUEST_IP_RATE",
+            default="30/hour",
+        ),
+        "email_code_request_email": env(
+            "EMAIL_CODE_REQUEST_EMAIL_RATE",
+            default="3/minute",
+        ),
+        "email_code_verify_ip": env(
+            "EMAIL_CODE_VERIFY_IP_RATE",
+            default="60/hour",
+        ),
+        "email_code_verify_email": env(
+            "EMAIL_CODE_VERIFY_EMAIL_RATE",
+            default="10/minute",
+        ),
+        "email_login_ip": env("EMAIL_LOGIN_IP_RATE", default="30/minute"),
+        "email_login_email": env(
+            "EMAIL_LOGIN_EMAIL_RATE",
+            default="5/minute",
+        ),
+        "token_refresh_ip": env("TOKEN_REFRESH_IP_RATE", default="120/hour"),
+        "password_mutation_user": env(
+            "PASSWORD_MUTATION_USER_RATE",
+            default="10/hour",
+        ),
     },
     "NUM_PROXIES": env.int("DRF_NUM_PROXIES", default=0),
 }

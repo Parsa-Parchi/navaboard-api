@@ -64,10 +64,18 @@ from apps.accounts.api.cookies import (
     set_refresh_token_cookie,
 )
 from apps.accounts.api.throttles import (
+    EmailCodeRequestEmailThrottle,
+    EmailCodeRequestIPThrottle,
+    EmailCodeVerificationEmailThrottle,
+    EmailCodeVerificationIPThrottle,
+    EmailLoginEmailThrottle,
+    EmailLoginIPThrottle,
     OTPRequestIPThrottle,
     OTPRequestPhoneThrottle,
     OTPVerificationIPThrottle,
     OTPVerificationPhoneThrottle,
+    PasswordMutationUserThrottle,
+    TokenRefreshIPThrottle,
     get_client_ip,
 )
 
@@ -195,11 +203,13 @@ class OTPVerificationAPIView(APIView):
 
 class TokenRefreshAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [TokenRefreshIPThrottle]
 
     @extend_schema(
         request=None,
         responses={
             status.HTTP_200_OK: TokenRefreshResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -301,11 +311,13 @@ class CurrentUserProfileAPIView(APIView):
 class EmailPasswordLoginAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = EmailPasswordLoginSerializer
+    throttle_classes = [EmailLoginIPThrottle, EmailLoginEmailThrottle]
 
     @extend_schema(
         request=EmailPasswordLoginSerializer,
         responses={
             status.HTTP_200_OK: OTPVerificationResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -345,11 +357,16 @@ class EmailPasswordLoginAPIView(APIView):
 class EmailSignupRequestAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = EmailSignupRequestSerializer
+    throttle_classes = [
+        EmailCodeRequestIPThrottle,
+        EmailCodeRequestEmailThrottle,
+    ]
 
     @extend_schema(
         request=EmailSignupRequestSerializer,
         responses={
             status.HTTP_201_CREATED: EmailSignupRequestResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -388,11 +405,16 @@ class EmailSignupRequestAPIView(APIView):
 class EmailSignupConfirmAPIView(APIView):
     permission_classes = [AllowAny]
     serializer_class = EmailSignupConfirmRequestSerializer
+    throttle_classes = [
+        EmailCodeVerificationIPThrottle,
+        EmailCodeVerificationEmailThrottle,
+    ]
 
     @extend_schema(
         request=EmailSignupConfirmRequestSerializer,
         responses={
             status.HTTP_200_OK: EmailSignupConfirmResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -429,11 +451,13 @@ class EmailSignupConfirmAPIView(APIView):
 
 class SetInitialPasswordAPIView(APIView):
     serializer_class = SetInitialPasswordSerializer
+    throttle_classes = [PasswordMutationUserThrottle]
 
     @extend_schema(
         request=SetInitialPasswordSerializer,
         responses={
             status.HTTP_200_OK: LogoutResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -464,11 +488,13 @@ class SetInitialPasswordAPIView(APIView):
 
 class ChangePasswordAPIView(APIView):
     serializer_class = ChangePasswordSerializer
+    throttle_classes = [PasswordMutationUserThrottle]
 
     @extend_schema(
         request=ChangePasswordSerializer,
         responses={
             status.HTTP_200_OK: LogoutResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
         tags=["auth"],
     )
@@ -500,11 +526,15 @@ class ChangePasswordAPIView(APIView):
 
 class PasswordResetRequestAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
 
     @extend_schema(
         tags=["auth"],
         request=PasswordResetRequestSerializer,
-        responses={status.HTTP_201_CREATED: PasswordResetRequestResponseSerializer},
+        responses={
+            status.HTTP_201_CREATED: PasswordResetRequestResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
+        },
     )
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -513,7 +543,7 @@ class PasswordResetRequestAPIView(APIView):
         try:
             result = create_password_reset_challenge(
                 phone_number=serializer.validated_data["phone_number"],
-                requested_ip=request.META.get("REMOTE_ADDR"),
+                requested_ip=get_client_ip(request),
             )
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
@@ -539,11 +569,15 @@ class PasswordResetRequestAPIView(APIView):
 
 class PasswordResetConfirmAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
 
     @extend_schema(
         tags=["auth"],
         request=PasswordResetConfirmSerializer,
-        responses={status.HTTP_200_OK: PasswordResetConfirmResponseSerializer},
+        responses={
+            status.HTTP_200_OK: PasswordResetConfirmResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
+        },
     )
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
@@ -572,10 +606,18 @@ class PasswordResetConfirmAPIView(APIView):
         return response
 
 class EmailVerificationRequestAPIView(APIView):
+    throttle_classes = [
+        EmailCodeRequestIPThrottle,
+        EmailCodeRequestEmailThrottle,
+    ]
+
     @extend_schema(
         tags=["auth"],
         request=EmailVerificationRequestSerializer,
-        responses={status.HTTP_201_CREATED: EmailVerificationRequestResponseSerializer},
+        responses={
+            status.HTTP_201_CREATED: EmailVerificationRequestResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
+        },
     )
     def post(self, request):
         serializer = EmailVerificationRequestSerializer(data=request.data)
@@ -585,7 +627,7 @@ class EmailVerificationRequestAPIView(APIView):
             result = create_email_verification_challenge(
                 user=request.user,
                 email=serializer.validated_data["email"],
-                requested_ip=request.META.get("REMOTE_ADDR"),
+                requested_ip=get_client_ip(request),
             )
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
@@ -610,10 +652,18 @@ class EmailVerificationRequestAPIView(APIView):
 
 
 class EmailVerificationConfirmAPIView(APIView):
+    throttle_classes = [
+        EmailCodeVerificationIPThrottle,
+        EmailCodeVerificationEmailThrottle,
+    ]
+
     @extend_schema(
         tags=["auth"],
         request=EmailVerificationConfirmSerializer,
-        responses={status.HTTP_200_OK: EmailVerificationConfirmResponseSerializer},
+        responses={
+            status.HTTP_200_OK: EmailVerificationConfirmResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
+        },
     )
     def post(self, request):
         serializer = EmailVerificationConfirmSerializer(data=request.data)
@@ -638,10 +688,15 @@ class EmailVerificationConfirmAPIView(APIView):
         )
 
 class PhoneChangeRequestAPIView(APIView):
+    throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
+
     @extend_schema(
         tags=["auth"],
         request=PhoneChangeRequestSerializer,
-        responses={status.HTTP_201_CREATED: PhoneChangeRequestResponseSerializer},
+        responses={
+            status.HTTP_201_CREATED: PhoneChangeRequestResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
+        },
     )
     def post(self, request):
         serializer = PhoneChangeRequestSerializer(data=request.data)
@@ -651,7 +706,7 @@ class PhoneChangeRequestAPIView(APIView):
             result = create_phone_change_challenge(
                 user=request.user,
                 phone_number=serializer.validated_data["phone_number"],
-                requested_ip=request.META.get("REMOTE_ADDR"),
+                requested_ip=get_client_ip(request),
             )
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
@@ -676,10 +731,15 @@ class PhoneChangeRequestAPIView(APIView):
 
 
 class PhoneChangeConfirmAPIView(APIView):
+    throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
+
     @extend_schema(
         tags=["auth"],
         request=PhoneChangeConfirmSerializer,
-        responses={status.HTTP_200_OK: PhoneChangeConfirmResponseSerializer},
+        responses={
+            status.HTTP_200_OK: PhoneChangeConfirmResponseSerializer,
+            status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
+        },
     )
     def post(self, request):
         serializer = PhoneChangeConfirmSerializer(data=request.data)

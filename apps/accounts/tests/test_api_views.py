@@ -8,16 +8,25 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 
 from apps.accounts.api.throttles import (
+    EmailCodeRequestEmailThrottle,
+    EmailCodeRequestIPThrottle,
+    EmailCodeVerificationEmailThrottle,
+    EmailCodeVerificationIPThrottle,
+    EmailLoginEmailThrottle,
+    EmailLoginIPThrottle,
     OTPRequestIPThrottle,
     OTPRequestPhoneThrottle,
     OTPVerificationIPThrottle,
     OTPVerificationPhoneThrottle,
+    PasswordMutationUserThrottle,
+    TokenRefreshIPThrottle,
 )
 from apps.accounts.models import (
     EmailSignupChallenge,
     EmailVerificationChallenge,
     OTPChallenge,
 )
+from apps.accounts.services.email_signup import create_email_signup_challenge
 from apps.accounts.services.otp import check_otp_code, create_otp_challenge
 from apps.accounts.services.tokens import issue_auth_token_pair
 
@@ -344,6 +353,10 @@ class OTPVerificationAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 class AuthSessionAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
     def test_refreshes_auth_tokens(self):
         request_result = create_otp_challenge(phone_number="09121234567")
         verify_url = reverse("accounts-api:otp-verify")
@@ -390,6 +403,31 @@ class AuthSessionAPIViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch.object(TokenRefreshIPThrottle, "rate", "2/minute", create=True)
+    def test_throttles_token_refresh_by_ip(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+        token_pair = issue_auth_token_pair(user)
+        self.client.cookies[settings.AUTH_REFRESH_COOKIE_NAME] = token_pair.refresh
+        url = reverse("accounts-api:token-refresh")
+
+        responses = [
+            self.client.post(url, data={}, format="json")
+            for _ in range(3)
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_200_OK,
+                status.HTTP_200_OK,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
+        self.assertIn("Retry-After", responses[-1])
 
     def test_logs_out_by_blacklisting_refresh_token(self):
         request_result = create_otp_challenge(phone_number="09121234567")
@@ -560,6 +598,10 @@ class CurrentUserProfileAPIViewTests(APITestCase):
 
 
 class EmailPasswordLoginAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
     def test_logs_in_verified_user_with_email_and_password(self):
         user = User.objects.create_user(
             email="ali@example.com",
@@ -643,8 +685,49 @@ class EmailPasswordLoginAPIViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch.object(EmailLoginIPThrottle, "rate", "100/minute", create=True)
+    @patch.object(EmailLoginEmailThrottle, "rate", "2/minute", create=True)
+    def test_throttles_login_attempts_for_normalized_email(self):
+        User.objects.create_user(
+            email="ali@example.com",
+            password="StrongPassword123!",
+            is_email_verified=True,
+        )
+        url = reverse("accounts-api:email-login")
+        emails = [
+            "ali@example.com",
+            "ALI@example.com",
+            "  Ali@Example.COM  ",
+        ]
+
+        responses = [
+            self.client.post(
+                url,
+                data={
+                    "email": email,
+                    "password": "WrongPassword123!",
+                },
+                format="json",
+            )
+            for email in emails
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
+        self.assertIn("Retry-After", responses[-1])
+
 
 class EmailSignupAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
     @override_settings(EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE=True)
     def test_requests_email_signup_code_without_creating_user(self):
         url = reverse("accounts-api:email-signup-request")
@@ -875,8 +958,102 @@ class EmailSignupAPIViewTests(APITestCase):
         self.assertTrue(user.check_password("OriginalStrongPassword123!"))
         self.assertFalse(EmailSignupChallenge.objects.exists())
 
+    @patch.object(
+        EmailCodeRequestIPThrottle,
+        "rate",
+        "100/minute",
+        create=True,
+    )
+    @patch.object(
+        EmailCodeRequestEmailThrottle,
+        "rate",
+        "2/minute",
+        create=True,
+    )
+    def test_throttles_signup_requests_for_normalized_email(self):
+        url = reverse("accounts-api:email-signup-request")
+        emails = [
+            "ali@example.com",
+            "ALI@example.com",
+            "  Ali@Example.COM  ",
+        ]
+
+        responses = [
+            self.client.post(
+                url,
+                data={
+                    "email": email,
+                    "password": "StrongPassword123!",
+                },
+                format="json",
+            )
+            for email in emails
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_201_CREATED,
+                status.HTTP_201_CREATED,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
+        self.assertEqual(EmailSignupChallenge.objects.count(), 2)
+
+    @patch.object(
+        EmailCodeVerificationIPThrottle,
+        "rate",
+        "100/minute",
+        create=True,
+    )
+    @patch.object(
+        EmailCodeVerificationEmailThrottle,
+        "rate",
+        "2/minute",
+        create=True,
+    )
+    def test_throttles_signup_confirmation_attempts_by_email(self):
+        signup_result = create_email_signup_challenge(
+            email="ali@example.com",
+            password="StrongPassword123!",
+        )
+        invalid_code = (
+            "000000"
+            if signup_result.plain_code != "000000"
+            else "111111"
+        )
+        url = reverse("accounts-api:email-signup-confirm")
+
+        responses = [
+            self.client.post(
+                url,
+                data={
+                    "email": "ALI@example.com",
+                    "code": invalid_code,
+                },
+                format="json",
+            )
+            for _ in range(3)
+        ]
+
+        signup_result.challenge.refresh_from_db()
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
+        self.assertEqual(signup_result.challenge.attempts_count, 2)
+
 
 class SetInitialPasswordAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
     def test_sets_initial_password_for_authenticated_user(self):
         request_result = create_otp_challenge(phone_number="09121234567")
         verify_url = reverse("accounts-api:otp-verify")
@@ -962,6 +1139,10 @@ class SetInitialPasswordAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 class ChangePasswordAPIViewTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
     def test_changes_password_for_authenticated_user(self):
         user = User.objects.create_user(
             phone_number="+989121234567",
@@ -1082,8 +1263,50 @@ class ChangePasswordAPIViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch.object(
+        PasswordMutationUserThrottle,
+        "rate",
+        "2/hour",
+        create=True,
+    )
+    def test_throttles_password_change_attempts_by_user(self):
+        user = User.objects.create_user(
+            phone_number="+989121234567",
+            password="OldStrongPassword123!",
+            is_phone_verified=True,
+        )
+        token_pair = issue_auth_token_pair(user)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+        url = reverse("accounts-api:change-password")
+
+        responses = [
+            self.client.post(
+                url,
+                data={
+                    "current_password": "WrongPassword123!",
+                    "new_password": "NewStrongPassword123!",
+                },
+                format="json",
+            )
+            for _ in range(3)
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
+
+
 class EmailVerificationAPIViewTests(TestCase):
     def setUp(self):
+        super().setUp()
+        cache.clear()
         self.client = APIClient()
         self.user = User.objects.create_user(
             phone_number="+989121234567",
@@ -1129,6 +1352,46 @@ class EmailVerificationAPIViewTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNotIn("development_verification_code", response.data)
+
+    @patch.object(
+        EmailCodeRequestIPThrottle,
+        "rate",
+        "100/minute",
+        create=True,
+    )
+    @patch.object(
+        EmailCodeRequestEmailThrottle,
+        "rate",
+        "2/minute",
+        create=True,
+    )
+    def test_throttles_authenticated_email_verification_requests(self):
+        self.client.force_authenticate(user=self.user)
+        url = reverse("accounts-api:email-verification-request")
+
+        responses = [
+            self.client.post(
+                url,
+                {
+                    "email": email,
+                },
+                format="json",
+            )
+            for email in (
+                "ali@example.com",
+                "ALI@example.com",
+                "  Ali@Example.COM  ",
+            )
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_201_CREATED,
+                status.HTTP_201_CREATED,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
 
     def test_anonymous_user_cannot_request_email_verification_code(self):
         response = self.client.post(
@@ -1218,6 +1481,8 @@ class EmailVerificationAPIViewTests(TestCase):
 
 class PasswordResetAPIViewTests(TestCase):
     def setUp(self):
+        super().setUp()
+        cache.clear()
         self.client = APIClient()
         self.user = User.objects.create_user(
             phone_number="+989121234567",
@@ -1263,6 +1528,35 @@ class PasswordResetAPIViewTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertNotIn("development_otp_code", response.data)
+
+    @patch.object(OTPRequestIPThrottle, "rate", "100/minute", create=True)
+    @patch.object(OTPRequestPhoneThrottle, "rate", "2/minute", create=True)
+    def test_throttles_password_reset_requests_by_phone(self):
+        url = reverse("accounts-api:password-reset-request")
+
+        responses = [
+            self.client.post(
+                url,
+                {
+                    "phone_number": phone_number,
+                },
+                format="json",
+            )
+            for phone_number in (
+                "0912 123 4567",
+                "+989121234567",
+                "09121234567",
+            )
+        ]
+
+        self.assertEqual(
+            [response.status_code for response in responses],
+            [
+                status.HTTP_201_CREATED,
+                status.HTTP_201_CREATED,
+                status.HTTP_429_TOO_MANY_REQUESTS,
+            ],
+        )
 
     def test_rejects_password_reset_request_for_unknown_phone_number(self):
         response = self.client.post(
@@ -1387,6 +1681,8 @@ class PasswordResetAPIViewTests(TestCase):
 
 class PhoneChangeAPIViewTests(TestCase):
     def setUp(self):
+        super().setUp()
+        cache.clear()
         self.client = APIClient()
         self.user = User.objects.create_user(
             phone_number="+989121234567",
