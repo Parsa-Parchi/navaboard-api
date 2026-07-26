@@ -862,11 +862,24 @@ class SetInitialPasswordAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data["detail"],
-            "Password has been set successfully.",
+            "Password has been set successfully. Please sign in again.",
+        )
+        self.assertEqual(
+            response.cookies[settings.AUTH_REFRESH_COOKIE_NAME].value,
+            "",
         )
 
         user = User.objects.get(phone_number="+989121234567")
         self.assertTrue(user.check_password("StrongPassword123!"))
+
+        profile_response = self.client.get(
+            reverse("accounts-api:me"),
+        )
+
+        self.assertEqual(
+            profile_response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
 
     def test_rejects_unauthenticated_request(self):
         url = reverse("accounts-api:set-password")
@@ -914,6 +927,7 @@ class ChangePasswordAPIViewTests(APITestCase):
         token_pair = issue_auth_token_pair(user)
         url = reverse("accounts-api:change-password")
 
+        self.client.cookies[settings.AUTH_REFRESH_COOKIE_NAME] = token_pair.refresh
         self.client.credentials(
             HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
         )
@@ -930,12 +944,38 @@ class ChangePasswordAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data["detail"],
-            "Password has been changed successfully.",
+            "Password has been changed successfully. Please sign in again.",
         )
 
         user.refresh_from_db()
         self.assertTrue(user.check_password("NewStrongPassword123!"))
         self.assertFalse(user.check_password("OldStrongPassword123!"))
+        self.assertEqual(
+            response.cookies[settings.AUTH_REFRESH_COOKIE_NAME].value,
+            "",
+        )
+
+        profile_response = self.client.get(
+            reverse("accounts-api:me"),
+        )
+
+        self.assertEqual(
+            profile_response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+        self.client.credentials()
+        self.client.cookies[settings.AUTH_REFRESH_COOKIE_NAME] = token_pair.refresh
+        refresh_response = self.client.post(
+            reverse("accounts-api:token-refresh"),
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(
+            refresh_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
 
     def test_rejects_unauthenticated_request(self):
         url = reverse("accounts-api:change-password")
@@ -1193,6 +1233,7 @@ class PasswordResetAPIViewTests(TestCase):
 
     @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
     def test_user_can_confirm_password_reset_code(self):
+        token_pair = issue_auth_token_pair(self.user)
         request_response = self.client.post(
             reverse("accounts-api:password-reset-request"),
             {
@@ -1220,10 +1261,39 @@ class PasswordResetAPIViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data["detail"],
-            "Password has been reset successfully.",
+            "Password has been reset successfully. Please sign in again.",
         )
         self.assertTrue(self.user.check_password("NewStrongPassword123!"))
         self.assertIsNotNone(challenge.used_at)
+        self.assertEqual(
+            response.cookies[settings.AUTH_REFRESH_COOKIE_NAME].value,
+            "",
+        )
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {token_pair.access}",
+        )
+        profile_response = self.client.get(
+            reverse("accounts-api:me"),
+        )
+
+        self.assertEqual(
+            profile_response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+        self.client.credentials()
+        self.client.cookies[settings.AUTH_REFRESH_COOKIE_NAME] = token_pair.refresh
+        refresh_response = self.client.post(
+            reverse("accounts-api:token-refresh"),
+            data={},
+            format="json",
+        )
+
+        self.assertEqual(
+            refresh_response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
 
     @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
     def test_confirm_rejects_invalid_code(self):
@@ -1305,6 +1375,7 @@ class PhoneChangeAPIViewTests(TestCase):
         )
 
         self.assertEqual(challenge.phone_number, "+989124445566")
+        self.assertEqual(challenge.requested_by, self.user)
         self.assertEqual(len(response.data["development_otp_code"]), 6)
 
     @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=False)
@@ -1403,6 +1474,42 @@ class PhoneChangeAPIViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(challenge.attempts_count, 1)
         self.assertIsNone(challenge.used_at)
+
+    @override_settings(OTP_DEVELOPMENT_CODE_IN_RESPONSE=True)
+    def test_user_cannot_confirm_another_users_phone_change_code(self):
+        self.client.force_authenticate(user=self.user)
+        request_response = self.client.post(
+            reverse("accounts-api:phone-change-request"),
+            {
+                "phone_number": "+989124445566",
+            },
+            format="json",
+        )
+        other_user = User.objects.create_user(
+            phone_number="+989131234567",
+            is_phone_verified=True,
+        )
+        self.client.force_authenticate(user=other_user)
+
+        response = self.client.post(
+            reverse("accounts-api:phone-change-confirm"),
+            {
+                "phone_number": "+989124445566",
+                "code": request_response.data["development_otp_code"],
+            },
+            format="json",
+        )
+
+        challenge = OTPChallenge.objects.get(
+            phone_number="+989124445566",
+            purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+        )
+        other_user.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(challenge.attempts_count, 0)
+        self.assertIsNone(challenge.used_at)
+        self.assertEqual(other_user.phone_number, "+989131234567")
 
     def test_anonymous_user_cannot_confirm_phone_change_code(self):
         response = self.client.post(

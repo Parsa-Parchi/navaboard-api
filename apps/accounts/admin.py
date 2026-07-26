@@ -114,6 +114,7 @@ class OTPChallengeAdmin(admin.ModelAdmin):
         "id",
         "phone_number",
         "purpose",
+        "requested_by",
         "expires_at",
         "attempts_count",
         "max_attempts",
@@ -132,12 +133,16 @@ class OTPChallengeAdmin(admin.ModelAdmin):
         "id",
         "phone_number",
         "requested_ip",
+        "requested_by__phone_number",
+        "requested_by__email",
     )
+    list_select_related = ("requested_by",)
     ordering = ("-created_at",)
     readonly_fields = (
         "id",
         "phone_number",
         "purpose",
+        "requested_by",
         "code_hash",
         "expires_at",
         "attempts_count",

@@ -458,10 +458,18 @@ class SetInitialPasswordAPIView(APIView):
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
 
-        return Response(
-            {"detail": "Password has been set successfully."},
+        response = Response(
+            {
+                "detail": (
+                    "Password has been set successfully. "
+                    "Please sign in again."
+                )
+            },
             status=status.HTTP_200_OK,
         )
+        clear_refresh_token_cookie(response)
+
+        return response
 
 class ChangePasswordAPIView(APIView):
     serializer_class = ChangePasswordSerializer
@@ -486,10 +494,18 @@ class ChangePasswordAPIView(APIView):
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
 
-        return Response(
-            {"detail": "Password has been changed successfully."},
+        response = Response(
+            {
+                "detail": (
+                    "Password has been changed successfully. "
+                    "Please sign in again."
+                )
+            },
             status=status.HTTP_200_OK,
         )
+        clear_refresh_token_cookie(response)
+
+        return response
 
 class PasswordResetRequestAPIView(APIView):
     permission_classes = [AllowAny]
@@ -551,12 +567,18 @@ class PasswordResetConfirmAPIView(APIView):
         except DjangoValidationError as exc:
             raise DRFValidationError(exc.messages) from exc
 
-        return Response(
+        response = Response(
             {
-                "detail": "Password has been reset successfully.",
+                "detail": (
+                    "Password has been reset successfully. "
+                    "Please sign in again."
+                ),
             },
             status=status.HTTP_200_OK,
         )
+        clear_refresh_token_cookie(response)
+
+        return response
 
 class EmailVerificationRequestAPIView(APIView):
     @extend_schema(

@@ -54,20 +54,36 @@ def create_otp_challenge(
     phone_number: str,
     purpose: str = OTPChallenge.Purpose.LOGIN,
     requested_ip: str | None = None,
+    requested_by: Any | None = None,
 ) -> OTPChallengeRequestResult:
     normalized_phone_number = normalize_iranian_mobile_number(phone_number)
 
     if normalized_phone_number is None:
         raise ValidationError("Phone number is required.")
 
+    if (
+        purpose == OTPChallenge.Purpose.CHANGE_PHONE
+        and requested_by is None
+    ):
+        raise ValidationError(
+            "A requesting user is required for phone change challenges."
+        )
+
     now = timezone.now()
 
-    OTPChallenge.objects.filter(
+    active_challenges = OTPChallenge.objects.filter(
         phone_number=normalized_phone_number,
         purpose=purpose,
         used_at__isnull=True,
         revoked_at__isnull=True,
-    ).update(revoked_at=now)
+    )
+
+    if requested_by is not None:
+        active_challenges = active_challenges.filter(
+            requested_by=requested_by,
+        )
+
+    active_challenges.update(revoked_at=now)
 
     plain_code = generate_numeric_otp_code()
     challenge = OTPChallenge.objects.create(
@@ -76,6 +92,7 @@ def create_otp_challenge(
         code_hash=hash_otp_code(plain_code),
         expires_at=now + OTP_LIFETIME,
         requested_ip=requested_ip,
+        requested_by=requested_by,
     )
 
     return OTPChallengeRequestResult(

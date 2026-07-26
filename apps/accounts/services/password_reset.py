@@ -15,6 +15,7 @@ from apps.accounts.services.otp import (
     check_otp_code,
     create_otp_challenge,
 )
+from apps.accounts.services.tokens import blacklist_all_refresh_tokens_for_user
 
 
 @dataclass(frozen=True)
@@ -117,6 +118,7 @@ def confirm_password_reset(
 
             user.set_password(new_password)
             user.save(update_fields=["password", "updated_at"])
+            blacklist_all_refresh_tokens_for_user(user)
 
             challenge.used_at = timezone.now()
             challenge.save(update_fields=["used_at"])

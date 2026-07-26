@@ -4,6 +4,9 @@ from typing import Any
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import transaction
+
+from apps.accounts.services.tokens import blacklist_all_refresh_tokens_for_user
 
 
 def set_initial_password_for_user(
@@ -19,8 +22,10 @@ def set_initial_password_for_user(
 
     validate_password(password, user=user)
 
-    user.set_password(password)
-    user.save(update_fields=["password", "updated_at"])
+    with transaction.atomic():
+        user.set_password(password)
+        user.save(update_fields=["password", "updated_at"])
+        blacklist_all_refresh_tokens_for_user(user)
 
     return user
 
@@ -44,7 +49,9 @@ def change_password_for_user(
 
     validate_password(new_password, user=user)
 
-    user.set_password(new_password)
-    user.save(update_fields=["password", "updated_at"])
+    with transaction.atomic():
+        user.set_password(new_password)
+        user.save(update_fields=["password", "updated_at"])
+        blacklist_all_refresh_tokens_for_user(user)
 
     return user

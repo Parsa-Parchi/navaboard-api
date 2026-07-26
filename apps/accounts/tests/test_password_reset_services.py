@@ -11,6 +11,10 @@ from apps.accounts.services.password_reset import (
     confirm_password_reset,
     create_password_reset_challenge,
 )
+from apps.accounts.services.tokens import (
+    issue_auth_token_pair,
+    refresh_auth_token_pair,
+)
 
 
 User = get_user_model()
@@ -66,6 +70,7 @@ class PasswordResetServiceTests(TestCase):
         result = create_password_reset_challenge(
             phone_number="+989121234567",
         )
+        token_pair = issue_auth_token_pair(user)
 
         confirm_result = confirm_password_reset(
             phone_number="+989121234567",
@@ -79,6 +84,9 @@ class PasswordResetServiceTests(TestCase):
         self.assertEqual(confirm_result.user.id, user.id)
         self.assertTrue(user.check_password("NewStrongPassword123!"))
         self.assertIsNotNone(result.challenge.used_at)
+
+        with self.assertRaises(ValidationError):
+            refresh_auth_token_pair(token_pair.refresh)
 
     def test_rejects_invalid_code_and_increments_attempts_count(self):
         User.objects.create_user(

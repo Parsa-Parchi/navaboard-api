@@ -68,6 +68,7 @@ def create_phone_change_challenge(
         phone_number=normalized_phone_number,
         purpose=OTPChallenge.Purpose.CHANGE_PHONE,
         requested_ip=requested_ip,
+        requested_by=user,
     )
 
     return PhoneChangeRequestResult(
@@ -107,6 +108,7 @@ def confirm_phone_change(
             .filter(
                 phone_number=normalized_phone_number,
                 purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+                requested_by=locked_user,
                 used_at__isnull=True,
                 revoked_at__isnull=True,
             )

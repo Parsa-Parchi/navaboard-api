@@ -76,3 +76,19 @@ class OTPChallengeModelTests(TestCase):
 
         with self.assertRaises(ValidationError):
             challenge.full_clean()
+
+    def test_active_phone_change_challenge_requires_requesting_user(self):
+        challenge = self._build_otp_challenge(
+            purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+        )
+
+        with self.assertRaises(ValidationError):
+            challenge.full_clean()
+
+    def test_revoked_phone_change_challenge_can_remain_unowned(self):
+        challenge = self._build_otp_challenge(
+            purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+            revoked_at=timezone.now(),
+        )
+
+        challenge.full_clean()

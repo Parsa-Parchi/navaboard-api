@@ -6,6 +6,10 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -57,3 +61,10 @@ def blacklist_refresh_token(refresh_token: str) -> None:
         RefreshToken(normalized_refresh_token).blacklist()
     except TokenError as exc:
         raise ValidationError("Refresh token is invalid or expired.") from exc
+
+
+def blacklist_all_refresh_tokens_for_user(user: Any) -> None:
+    outstanding_tokens = OutstandingToken.objects.filter(user=user)
+
+    for outstanding_token in outstanding_tokens.iterator():
+        BlacklistedToken.objects.get_or_create(token=outstanding_token)

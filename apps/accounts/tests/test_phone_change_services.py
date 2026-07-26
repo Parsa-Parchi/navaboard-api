@@ -33,6 +33,7 @@ class PhoneChangeServiceTests(TestCase):
 
         self.assertEqual(challenge.phone_number, "+989124445566")
         self.assertEqual(challenge.purpose, OTPChallenge.Purpose.CHANGE_PHONE)
+        self.assertEqual(challenge.requested_by, user)
         self.assertEqual(challenge.requested_ip, "127.0.0.1")
         self.assertEqual(len(result.plain_code), 6)
         self.assertTrue(result.plain_code.isdigit())
@@ -66,6 +67,63 @@ class PhoneChangeServiceTests(TestCase):
                 user=user,
                 phone_number="0912 123 4567",
             )
+
+    def test_same_target_for_another_user_does_not_revoke_challenge(self):
+        first_user = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+        second_user = User.objects.create_user(
+            phone_number="+989131234567",
+            is_phone_verified=True,
+        )
+
+        first_result = create_phone_change_challenge(
+            user=first_user,
+            phone_number="+989124445566",
+        )
+        second_result = create_phone_change_challenge(
+            user=second_user,
+            phone_number="+989124445566",
+        )
+
+        first_result.challenge.refresh_from_db()
+        second_result.challenge.refresh_from_db()
+
+        self.assertIsNone(first_result.challenge.revoked_at)
+        self.assertIsNone(second_result.challenge.revoked_at)
+        self.assertEqual(first_result.challenge.requested_by, first_user)
+        self.assertEqual(second_result.challenge.requested_by, second_user)
+
+    def test_user_cannot_confirm_another_users_challenge(self):
+        challenge_owner = User.objects.create_user(
+            phone_number="+989121234567",
+            is_phone_verified=True,
+        )
+        other_user = User.objects.create_user(
+            phone_number="+989131234567",
+            is_phone_verified=True,
+        )
+        result = create_phone_change_challenge(
+            user=challenge_owner,
+            phone_number="+989124445566",
+        )
+
+        with self.assertRaises(ValidationError):
+            confirm_phone_change(
+                user=other_user,
+                phone_number="+989124445566",
+                plain_code=result.plain_code,
+            )
+
+        result.challenge.refresh_from_db()
+        challenge_owner.refresh_from_db()
+        other_user.refresh_from_db()
+
+        self.assertEqual(result.challenge.attempts_count, 0)
+        self.assertIsNone(result.challenge.used_at)
+        self.assertEqual(challenge_owner.phone_number, "+989121234567")
+        self.assertEqual(other_user.phone_number, "+989131234567")
 
     def test_confirms_phone_change_and_updates_user(self):
         user = User.objects.create_user(

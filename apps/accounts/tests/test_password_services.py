@@ -6,6 +6,10 @@ from apps.accounts.services.passwords import (
     change_password_for_user,
     set_initial_password_for_user,
 )
+from apps.accounts.services.tokens import (
+    issue_auth_token_pair,
+    refresh_auth_token_pair,
+)
 
 
 User = get_user_model()
@@ -19,6 +23,7 @@ class PasswordServiceTests(TestCase):
         )
 
         self.assertFalse(user.has_usable_password())
+        token_pair = issue_auth_token_pair(user)
 
         updated_user = set_initial_password_for_user(
             user=user,
@@ -26,6 +31,9 @@ class PasswordServiceTests(TestCase):
         )
 
         self.assertTrue(updated_user.check_password("StrongPassword123!"))
+
+        with self.assertRaises(ValidationError):
+            refresh_auth_token_pair(token_pair.refresh)
 
     def test_rejects_blank_password(self):
         user = User.objects.create_user(
@@ -70,6 +78,7 @@ class PasswordServiceTests(TestCase):
             password="OldStrongPassword123!",
             is_phone_verified=True,
         )
+        token_pair = issue_auth_token_pair(user)
 
         updated_user = change_password_for_user(
             user=user,
@@ -79,6 +88,9 @@ class PasswordServiceTests(TestCase):
 
         self.assertTrue(updated_user.check_password("NewStrongPassword123!"))
         self.assertFalse(updated_user.check_password("OldStrongPassword123!"))
+
+        with self.assertRaises(ValidationError):
+            refresh_auth_token_pair(token_pair.refresh)
 
     def test_rejects_change_password_with_wrong_current_password(self):
         user = User.objects.create_user(

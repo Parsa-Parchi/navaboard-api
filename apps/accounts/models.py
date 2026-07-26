@@ -157,6 +157,14 @@ class OTPChallenge(models.Model):
         blank=True,
     )
 
+    requested_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="requested_otp_challenges",
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
     )
@@ -167,6 +175,10 @@ class OTPChallenge(models.Model):
             models.Index(
                 fields=["phone_number", "purpose", "created_at"],
                 name="otp_phone_purpose_created_idx",
+            ),
+            models.Index(
+                fields=["requested_by", "phone_number", "purpose", "created_at"],
+                name="otp_req_phone_purpose_idx",
             ),
         ]
         constraints = [
@@ -185,6 +197,15 @@ class OTPChallenge(models.Model):
             models.CheckConstraint(
                 condition=Q(attempts_count__lte=F("max_attempts")),
                 name="otp_attempts_lte_max",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~Q(purpose="change_phone")
+                    | Q(requested_by__isnull=False)
+                    | Q(used_at__isnull=False)
+                    | Q(revoked_at__isnull=False)
+                ),
+                name="otp_change_active_has_user",
             ),
         ]
 

@@ -108,6 +108,12 @@ class OTPServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             create_otp_challenge(phone_number="")
 
+    def test_phone_change_challenge_requires_requesting_user(self):
+        with self.assertRaises(ValidationError):
+            create_otp_challenge(
+                phone_number="+989121234567",
+                purpose=OTPChallenge.Purpose.CHANGE_PHONE,
+            )
 
     def test_verifies_otp_and_creates_user_for_new_phone_number(self):
         request_result = create_otp_challenge(phone_number="09121234567")
