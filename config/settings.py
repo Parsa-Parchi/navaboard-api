@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "apps.accounts.apps.AccountsConfig",
     "apps.workspaces.apps.WorkspacesConfig",
+    "apps.boards.apps.BoardsConfig",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
