@@ -163,6 +163,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API documentation for the NavaBoard project.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "WorkspaceRole": "apps.workspaces.models.WorkspaceMembership.Role",
+        "WorkspaceAssignableRole": ["admin", "member"],
+    },
 }
 
 OTP_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
