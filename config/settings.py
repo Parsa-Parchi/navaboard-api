@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "apps.accounts.apps.AccountsConfig",
+    "apps.workspaces.apps.WorkspacesConfig",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
