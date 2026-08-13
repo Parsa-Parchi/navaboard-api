@@ -27,6 +27,7 @@ from apps.boards.api.serializers import (
     CardMoveSerializer,
     CardReadSerializer,
     CardUpdateSerializer,
+    BoardDetailReadSerializer,
 )
 from apps.boards.models import (
     Board,
@@ -127,6 +128,47 @@ def _get_visible_board(
 ) -> Board:
     return get_object_or_404(
         _board_queryset_for_user(user),
+        pk=board_id,
+    )
+
+def _get_visible_board_detail(
+    *,
+    user,
+    board_id,
+) -> Board:
+    cards_queryset = (
+        Card.objects.select_related(
+            "created_by",
+        ).order_by(
+            "position",
+            "created_at",
+        )
+    )
+
+    lists_queryset = (
+        BoardList.objects.order_by(
+            "position",
+            "created_at",
+        ).prefetch_related(
+            Prefetch(
+                "cards",
+                queryset=cards_queryset,
+            )
+        )
+    )
+
+    queryset = (
+        _board_queryset_for_user(user)
+        .prefetch_related(
+            Prefetch(
+                "lists",
+                queryset=lists_queryset,
+            )
+        )
+    )
+
+    return get_object_or_404(
+        queryset,
         pk=board_id,
     )
 
@@ -273,21 +315,30 @@ class BoardDetailAPIView(APIView):
 
     @extend_schema(
         responses={
-            status.HTTP_200_OK: BoardReadSerializer
+            status.HTTP_200_OK: BoardDetailReadSerializer
         },
         tags=["boards"],
     )
     def get(
-        self,
-        request,
-        board_id,
-    ):
-        board = self.get_object(
+            self,
             request,
             board_id,
+    ):
+        board = _get_visible_board_detail(
+            user=request.user,
+            board_id=board_id,
         )
 
-        serializer = BoardReadSerializer(
+        if not CanViewBoard().has_object_permission(
+                request,
+                self,
+                board,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        serializer = BoardDetailReadSerializer(
             board,
             context={
                 "request": request,

@@ -332,3 +332,32 @@ class CardMoveSerializer(serializers.Serializer):
     position = serializers.IntegerField(
         min_value=0,
     )
+
+class BoardListWithCardsReadSerializer(
+    BoardListReadSerializer
+):
+    cards = CardReadSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta(BoardListReadSerializer.Meta):
+        fields = (
+            BoardListReadSerializer.Meta.fields
+            + ("cards",)
+        )
+
+
+class BoardDetailReadSerializer(
+    BoardReadSerializer
+):
+    lists = BoardListWithCardsReadSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta(BoardReadSerializer.Meta):
+        fields = (
+            BoardReadSerializer.Meta.fields
+            + ("lists",)
+        )
