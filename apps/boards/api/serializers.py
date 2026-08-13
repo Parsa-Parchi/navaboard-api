@@ -1,7 +1,15 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from apps.boards.models import Board, BoardList, BoardMembership
+
+from apps.boards.models import (
+    Board,
+    BoardList,
+    BoardMembership,
+    Card,
+)
+
+
 from apps.workspaces.models import WorkspaceMembership
 
 
@@ -209,6 +217,118 @@ class BoardListUpdateSerializer(serializers.Serializer):
 
 
 class BoardListMoveSerializer(serializers.Serializer):
+    position = serializers.IntegerField(
+        min_value=0,
+    )
+
+class CardReadSerializer(serializers.ModelSerializer):
+    board_list_id = serializers.UUIDField(
+        read_only=True
+    )
+
+    created_by = serializers.UUIDField(
+        source="created_by_id",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = Card
+        fields = (
+            "id",
+            "board_list_id",
+            "title",
+            "description",
+            "position",
+            "due_at",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+
+
+class CardCreateSerializer(serializers.Serializer):
+    title = serializers.CharField(
+        max_length=200,
+    )
+
+    description = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+    due_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
+    position = serializers.IntegerField(
+        required=False,
+        min_value=0,
+    )
+
+    def validate_title(self, value: str) -> str:
+        title = value.strip()
+
+        if not title:
+            raise serializers.ValidationError(
+                "Card title is required."
+            )
+
+        return title
+
+    def validate_description(
+        self,
+        value: str,
+    ) -> str:
+        return value.strip()
+
+
+class CardUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(
+        required=False,
+        max_length=200,
+    )
+
+    description = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+
+    due_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
+    def validate_title(self, value: str) -> str:
+        title = value.strip()
+
+        if not title:
+            raise serializers.ValidationError(
+                "Card title is required."
+            )
+
+        return title
+
+    def validate_description(
+        self,
+        value: str,
+    ) -> str:
+        return value.strip()
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError(
+                "At least one field must be provided."
+            )
+
+        return attrs
+
+
+class CardMoveSerializer(serializers.Serializer):
+    destination_list_id = serializers.UUIDField()
+
     position = serializers.IntegerField(
         min_value=0,
     )

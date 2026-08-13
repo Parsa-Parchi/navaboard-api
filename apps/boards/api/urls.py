@@ -8,6 +8,9 @@ from apps.boards.api.views import (
     BoardListMoveAPIView,
     BoardMembershipDetailAPIView,
     BoardMembershipListCreateAPIView,
+    CardDetailAPIView,
+    CardListCreateAPIView,
+    CardMoveAPIView,
 )
 
 
@@ -49,5 +52,20 @@ urlpatterns = [
         "boards/<uuid:board_id>/lists/<uuid:list_id>/move/",
         BoardListMoveAPIView.as_view(),
         name="list-move",
+    ),
+    path(
+        "boards/<uuid:board_id>/lists/<uuid:list_id>/cards/",
+        CardListCreateAPIView.as_view(),
+        name="card-list",
+    ),
+    path(
+        "boards/<uuid:board_id>/cards/<uuid:card_id>/",
+        CardDetailAPIView.as_view(),
+        name="card-detail",
+    ),
+    path(
+        "boards/<uuid:board_id>/cards/<uuid:card_id>/move/",
+        CardMoveAPIView.as_view(),
+        name="card-move",
     ),
 ]
