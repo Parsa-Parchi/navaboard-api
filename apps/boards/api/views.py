@@ -13,11 +13,19 @@ from apps.boards.api.permissions import (
     IsBoardAdmin,
 )
 from apps.boards.api.serializers import (
+    BoardMemberCreateSerializer,
+    BoardMembershipReadSerializer,
+    BoardMemberRoleUpdateSerializer,
     BoardReadSerializer,
     BoardWriteSerializer,
 )
 from apps.boards.models import Board, BoardMembership
-from apps.boards.services.boards import create_board
+from apps.boards.services.boards import (
+    add_board_member,
+    change_board_member_role,
+    create_board,
+    remove_board_member,
+)
 from apps.workspaces.models import (
     Workspace,
     WorkspaceMembership,
@@ -106,6 +114,30 @@ def _get_member_workspace(
         ).distinct(),
         pk=workspace_id,
     )
+
+
+def _get_board_workspace_membership(
+    *,
+    board: Board,
+    user_id,
+) -> WorkspaceMembership:
+    try:
+        return WorkspaceMembership.objects.select_related(
+            "user",
+        ).get(
+            workspace=board.workspace,
+            user_id=user_id,
+            user__is_active=True,
+        )
+    except WorkspaceMembership.DoesNotExist as exc:
+        raise ValidationError(
+            {
+                "user_id": (
+                    "An active member of this board's workspace "
+                    "with this id was not found."
+                )
+            }
+        ) from exc
 
 
 class BoardListCreateAPIView(APIView):
@@ -315,6 +347,254 @@ class BoardDetailAPIView(APIView):
             )
 
         board.delete()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class BoardMembershipListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_board(
+        self,
+        request,
+        board_id,
+    ) -> Board:
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        if not CanViewBoard().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        return board
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: BoardMembershipReadSerializer(
+                many=True
+            )
+        },
+        tags=["boards"],
+    )
+    def get(
+        self,
+        request,
+        board_id,
+    ):
+        board = self.get_board(
+            request,
+            board_id,
+        )
+
+        memberships = board.memberships.select_related(
+            "workspace_membership__user",
+        )
+
+        serializer = BoardMembershipReadSerializer(
+            memberships,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=BoardMemberCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: BoardMembershipReadSerializer
+        },
+        tags=["boards"],
+    )
+    def post(
+        self,
+        request,
+        board_id,
+    ):
+        board = self.get_board(
+            request,
+            board_id,
+        )
+
+        if not IsBoardAdmin().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                IsBoardAdmin.message
+            )
+
+        serializer = BoardMemberCreateSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        workspace_membership = (
+            _get_board_workspace_membership(
+                board=board,
+                user_id=serializer.validated_data["user_id"],
+            )
+        )
+
+        try:
+            membership = add_board_member(
+                board=board,
+                workspace_membership=workspace_membership,
+                role=serializer.validated_data["role"],
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        membership = BoardMembership.objects.select_related(
+            "workspace_membership__user",
+        ).get(
+            pk=membership.pk,
+        )
+
+        response_serializer = BoardMembershipReadSerializer(
+            membership,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class BoardMembershipDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_objects(
+        self,
+        request,
+        board_id,
+        membership_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        membership = get_object_or_404(
+            board.memberships.select_related(
+                "workspace_membership__user",
+            ),
+            pk=membership_id,
+        )
+
+        return board, membership
+
+    @extend_schema(
+        request=BoardMemberRoleUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: BoardMembershipReadSerializer
+        },
+        tags=["boards"],
+    )
+    def patch(
+        self,
+        request,
+        board_id,
+        membership_id,
+    ):
+        board, membership = self.get_objects(
+            request,
+            board_id,
+            membership_id,
+        )
+
+        if not IsBoardAdmin().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                IsBoardAdmin.message
+            )
+
+        serializer = BoardMemberRoleUpdateSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            membership = change_board_member_role(
+                membership=membership,
+                role=serializer.validated_data["role"],
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        membership = BoardMembership.objects.select_related(
+            "workspace_membership__user",
+        ).get(
+            pk=membership.pk,
+        )
+
+        response_serializer = BoardMembershipReadSerializer(
+            membership,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["boards"],
+    )
+    def delete(
+        self,
+        request,
+        board_id,
+        membership_id,
+    ):
+        board, membership = self.get_objects(
+            request,
+            board_id,
+            membership_id,
+        )
+
+        removing_self = (
+            membership.user_id == request.user.id
+        )
+
+        if (
+            not removing_self
+            and not IsBoardAdmin().has_object_permission(
+                request,
+                self,
+                board,
+            )
+        ):
+            raise PermissionDenied(
+                "You cannot remove this board member."
+            )
+
+        try:
+            remove_board_member(
+                membership=membership,
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
 
         return Response(
             status=status.HTTP_204_NO_CONTENT,

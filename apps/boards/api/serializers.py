@@ -1,7 +1,11 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.boards.models import Board, BoardMembership
 from apps.workspaces.models import WorkspaceMembership
+
+
+User = get_user_model()
 
 
 class BoardReadSerializer(serializers.ModelSerializer):
@@ -103,3 +107,52 @@ class BoardWriteSerializer(serializers.ModelSerializer):
 
     def validate_description(self, value: str) -> str:
         return value.strip()
+
+
+class BoardMemberUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "full_name",
+        )
+
+
+class BoardMembershipReadSerializer(serializers.ModelSerializer):
+    board_id = serializers.UUIDField(read_only=True)
+    workspace_membership_id = serializers.UUIDField(read_only=True)
+    user = BoardMemberUserSerializer(
+        source="workspace_membership.user",
+        read_only=True,
+    )
+
+    class Meta:
+        model = BoardMembership
+        fields = (
+            "id",
+            "board_id",
+            "workspace_membership_id",
+            "user",
+            "role",
+            "joined_at",
+        )
+
+
+class BoardMemberCreateSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    role = serializers.ChoiceField(
+        choices=(
+            BoardMembership.Role.ADMIN,
+            BoardMembership.Role.MEMBER,
+        ),
+        default=BoardMembership.Role.MEMBER,
+    )
+
+
+class BoardMemberRoleUpdateSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(
+        choices=(
+            BoardMembership.Role.ADMIN,
+            BoardMembership.Role.MEMBER,
+        ),
+    )
