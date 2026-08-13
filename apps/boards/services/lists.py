@@ -66,3 +66,19 @@ def delete_board_list(*, board_list: BoardList) -> None:
     remaining_lists = list(queryset.order_by("position", "created_at"))
     persist_order(queryset, remaining_lists)
 
+@transaction.atomic
+def update_board_list(
+    *,
+    board_list: BoardList,
+    title: str,
+) -> BoardList:
+    locked_list = BoardList.objects.select_for_update().get(
+        pk=board_list.pk,
+    )
+
+    locked_list.title = title
+    locked_list.full_clean()
+    locked_list.save()
+
+    return locked_list
+
