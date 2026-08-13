@@ -9,22 +9,38 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.boards.api.permissions import (
+    CanEditBoard,
     CanViewBoard,
     IsBoardAdmin,
 )
 from apps.boards.api.serializers import (
+    BoardListCreateSerializer,
+    BoardListMoveSerializer,
+    BoardListReadSerializer,
+    BoardListUpdateSerializer,
     BoardMemberCreateSerializer,
     BoardMembershipReadSerializer,
     BoardMemberRoleUpdateSerializer,
     BoardReadSerializer,
     BoardWriteSerializer,
 )
-from apps.boards.models import Board, BoardMembership
+from apps.boards.models import (
+    Board,
+    BoardList,
+    BoardMembership,
+)
 from apps.boards.services.boards import (
     add_board_member,
     change_board_member_role,
     create_board,
     remove_board_member,
+)
+
+from apps.boards.services.lists import (
+    create_board_list,
+    delete_board_list,
+    move_board_list,
+    update_board_list,
 )
 from apps.workspaces.models import (
     Workspace,
@@ -598,4 +614,288 @@ class BoardMembershipDetailAPIView(APIView):
 
         return Response(
             status=status.HTTP_204_NO_CONTENT,
+        )
+
+class BoardListListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_board(
+        self,
+        request,
+        board_id,
+    ) -> Board:
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        if not CanViewBoard().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        return board
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: BoardListReadSerializer(
+                many=True
+            )
+        },
+        tags=["boards"],
+    )
+    def get(
+        self,
+        request,
+        board_id,
+    ):
+        board = self.get_board(
+            request,
+            board_id,
+        )
+
+        board_lists = board.lists.all()
+
+        serializer = BoardListReadSerializer(
+            board_lists,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=BoardListCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: BoardListReadSerializer
+        },
+        tags=["boards"],
+    )
+    def post(
+        self,
+        request,
+        board_id,
+    ):
+        board = self.get_board(
+            request,
+            board_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = BoardListCreateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            board_list = create_board_list(
+                board=board,
+                **serializer.validated_data,
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = BoardListReadSerializer(
+            board_list,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class BoardListDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_objects(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        board_list = get_object_or_404(
+            BoardList.objects.select_related(
+                "board",
+                "board__workspace",
+            ),
+            pk=list_id,
+            board=board,
+        )
+
+        return board, board_list
+
+    @extend_schema(
+        request=BoardListUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: BoardListReadSerializer
+        },
+        tags=["boards"],
+    )
+    def patch(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board, board_list = self.get_objects(
+            request,
+            board_id,
+            list_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            board_list,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = BoardListUpdateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            board_list = update_board_list(
+                board_list=board_list,
+                title=serializer.validated_data["title"],
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = BoardListReadSerializer(
+            board_list,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["boards"],
+    )
+    def delete(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board, board_list = self.get_objects(
+            request,
+            board_id,
+            list_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            board_list,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        delete_board_list(
+            board_list=board_list,
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class BoardListMoveAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=BoardListMoveSerializer,
+        responses={
+            status.HTTP_200_OK: BoardListReadSerializer
+        },
+        tags=["boards"],
+    )
+    def post(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        board_list = get_object_or_404(
+            BoardList.objects.select_related(
+                "board",
+                "board__workspace",
+            ),
+            pk=list_id,
+            board=board,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            board_list,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = BoardListMoveSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            board_list = move_board_list(
+                board_list=board_list,
+                position=serializer.validated_data["position"],
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = BoardListReadSerializer(
+            board_list,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
         )

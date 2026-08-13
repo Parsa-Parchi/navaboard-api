@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from apps.boards.models import Board, BoardMembership
+from apps.boards.models import Board, BoardList, BoardMembership
 from apps.workspaces.models import WorkspaceMembership
 
 
@@ -155,4 +155,60 @@ class BoardMemberRoleUpdateSerializer(serializers.Serializer):
             BoardMembership.Role.ADMIN,
             BoardMembership.Role.MEMBER,
         ),
+    )
+
+class BoardListReadSerializer(serializers.ModelSerializer):
+    board_id = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = BoardList
+        fields = (
+            "id",
+            "board_id",
+            "title",
+            "position",
+            "created_at",
+            "updated_at",
+        )
+
+
+class BoardListCreateSerializer(serializers.Serializer):
+    title = serializers.CharField(
+        max_length=120,
+    )
+    position = serializers.IntegerField(
+        required=False,
+        min_value=0,
+    )
+
+    def validate_title(self, value: str) -> str:
+        title = value.strip()
+
+        if not title:
+            raise serializers.ValidationError(
+                "List title is required."
+            )
+
+        return title
+
+
+class BoardListUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(
+        max_length=120,
+    )
+
+    def validate_title(self, value: str) -> str:
+        title = value.strip()
+
+        if not title:
+            raise serializers.ValidationError(
+                "List title is required."
+            )
+
+        return title
+
+
+class BoardListMoveSerializer(serializers.Serializer):
+    position = serializers.IntegerField(
+        min_value=0,
     )
