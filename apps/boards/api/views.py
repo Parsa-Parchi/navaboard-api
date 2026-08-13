@@ -23,11 +23,16 @@ from apps.boards.api.serializers import (
     BoardMemberRoleUpdateSerializer,
     BoardReadSerializer,
     BoardWriteSerializer,
+    CardCreateSerializer,
+    CardMoveSerializer,
+    CardReadSerializer,
+    CardUpdateSerializer,
 )
 from apps.boards.models import (
     Board,
     BoardList,
     BoardMembership,
+    Card,
 )
 from apps.boards.services.boards import (
     add_board_member,
@@ -45,6 +50,13 @@ from apps.boards.services.lists import (
 from apps.workspaces.models import (
     Workspace,
     WorkspaceMembership,
+)
+
+from apps.boards.services.cards import (
+    create_card,
+    delete_card,
+    move_card,
+    update_card,
 )
 
 
@@ -893,6 +905,373 @@ class BoardListMoveAPIView(APIView):
 
         response_serializer = BoardListReadSerializer(
             board_list,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+class CardListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_objects(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        board_list = get_object_or_404(
+            BoardList.objects.select_related(
+                "board",
+                "board__workspace",
+            ),
+            pk=list_id,
+            board=board,
+        )
+
+        return board, board_list
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: CardReadSerializer(
+                many=True
+            )
+        },
+        tags=["boards"],
+    )
+    def get(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board, board_list = self.get_objects(
+            request,
+            board_id,
+            list_id,
+        )
+
+        if not CanViewBoard().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        cards = board_list.cards.select_related(
+            "created_by",
+        ).all()
+
+        serializer = CardReadSerializer(
+            cards,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=CardCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: CardReadSerializer
+        },
+        tags=["boards"],
+    )
+    def post(
+        self,
+        request,
+        board_id,
+        list_id,
+    ):
+        board, board_list = self.get_objects(
+            request,
+            board_id,
+            list_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            board_list,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = CardCreateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            card = create_card(
+                board_list=board_list,
+                creator=request.user,
+                **serializer.validated_data,
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = CardReadSerializer(
+            card,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CardDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_objects(
+        self,
+        request,
+        board_id,
+        card_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        card = get_object_or_404(
+            Card.objects.select_related(
+                "board_list",
+                "board_list__board",
+                "board_list__board__workspace",
+                "created_by",
+            ),
+            pk=card_id,
+            board_list__board=board,
+        )
+
+        return board, card
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: CardReadSerializer
+        },
+        tags=["boards"],
+    )
+    def get(
+        self,
+        request,
+        board_id,
+        card_id,
+    ):
+        board, card = self.get_objects(
+            request,
+            board_id,
+            card_id,
+        )
+
+        if not CanViewBoard().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        serializer = CardReadSerializer(
+            card,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=CardUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: CardReadSerializer
+        },
+        tags=["boards"],
+    )
+    def patch(
+        self,
+        request,
+        board_id,
+        card_id,
+    ):
+        board, card = self.get_objects(
+            request,
+            board_id,
+            card_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = CardUpdateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            card = update_card(
+                card=card,
+                **serializer.validated_data,
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = CardReadSerializer(
+            card,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["boards"],
+    )
+    def delete(
+        self,
+        request,
+        board_id,
+        card_id,
+    ):
+        board, card = self.get_objects(
+            request,
+            board_id,
+            card_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        delete_card(
+            card=card,
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class CardMoveAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=CardMoveSerializer,
+        responses={
+            status.HTTP_200_OK: CardReadSerializer
+        },
+        tags=["boards"],
+    )
+    def post(
+        self,
+        request,
+        board_id,
+        card_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        card = get_object_or_404(
+            Card.objects.select_related(
+                "board_list",
+                "board_list__board",
+                "board_list__board__workspace",
+            ),
+            pk=card_id,
+            board_list__board=board,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = CardMoveSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        destination_list = BoardList.objects.filter(
+            pk=serializer.validated_data[
+                "destination_list_id"
+            ],
+            board=board,
+        ).first()
+
+        if destination_list is None:
+            raise ValidationError(
+                {
+                    "destination_list_id": (
+                        "Destination list must belong "
+                        "to this board."
+                    )
+                }
+            )
+
+        try:
+            card = move_card(
+                card=card,
+                destination_list=destination_list,
+                position=serializer.validated_data[
+                    "position"
+                ],
+            )
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        card = Card.objects.select_related(
+            "board_list",
+            "created_by",
+        ).get(
+            pk=card.pk,
+        )
+
+        response_serializer = CardReadSerializer(
+            card,
         )
 
         return Response(
