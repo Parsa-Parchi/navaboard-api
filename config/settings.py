@@ -165,8 +165,10 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {
-        "WorkspaceRole": "apps.workspaces.models.WorkspaceMembership.Role",
-        "WorkspaceAssignableRole": ["admin", "member"],
+    "WorkspaceRole": "apps.workspaces.models.WorkspaceMembership.Role",
+    "WorkspaceAssignableRole": ["admin", "member"],
+    "BoardVisibility": "apps.boards.models.Board.Visibility",
+    "BoardRole": "apps.boards.models.BoardMembership.Role",
     },
 }
 
