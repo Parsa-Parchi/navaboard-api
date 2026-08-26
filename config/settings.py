@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.accounts.apps.AccountsConfig",
     "apps.workspaces.apps.WorkspacesConfig",
     "apps.boards.apps.BoardsConfig",
+    "apps.collaboration.apps.CollaborationConfig",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
