@@ -14,7 +14,9 @@ from apps.boards.api.permissions import (
 )
 from apps.boards.models import Board, Card
 from apps.collaboration.api.permissions import (
+    CanManageBoardLabels,
     CanManageCardAssignees,
+    CanManageCardLabels,
     CanModifyComment,
 )
 from apps.collaboration.api.serializers import (
@@ -23,10 +25,25 @@ from apps.collaboration.api.serializers import (
     CommentCreateSerializer,
     CommentReadSerializer,
     CommentUpdateSerializer,
+    CardLabelCreateSerializer,
+    CardLabelReadSerializer,
+    LabelCreateSerializer,
+    LabelReadSerializer,
+    LabelUpdateSerializer,
 )
 from apps.collaboration.models import (
     CardAssignee,
     Comment,
+    CardLabel,
+    Label,
+)
+
+from apps.collaboration.services.labels import (
+    attach_label_to_card,
+    create_label,
+    delete_label,
+    detach_label_from_card,
+    update_label,
 )
 from apps.collaboration.services.assignees import (
     add_card_assignee,
@@ -85,6 +102,40 @@ def _get_visible_card(
     return get_object_or_404(
         _card_queryset_for_user(user),
         pk=card_id,
+    )
+
+def _board_queryset_for_user(user):
+    return (
+        Board.objects.filter(
+            Q(
+                workspace__memberships__user=user,
+                workspace__memberships__role=(
+                    WorkspaceMembership.Role.OWNER
+                ),
+            )
+            | Q(
+                memberships__workspace_membership__user=user,
+            )
+            | Q(
+                visibility=Board.Visibility.WORKSPACE,
+                workspace__memberships__user=user,
+            )
+        )
+        .select_related(
+            "workspace",
+        )
+        .distinct()
+    )
+
+
+def _get_visible_board(
+    *,
+    user,
+    board_id,
+) -> Board:
+    return get_object_or_404(
+        _board_queryset_for_user(user),
+        pk=board_id,
     )
 
 
@@ -529,6 +580,356 @@ class CommentDetailAPIView(APIView):
 
         delete_comment(
             comment=comment,
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class BoardLabelListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_board(
+        self,
+        request,
+        board_id,
+    ) -> Board:
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        if not CanViewBoard().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        return board
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: LabelReadSerializer(
+                many=True,
+            )
+        },
+        tags=["collaboration"],
+    )
+    def get(
+        self,
+        request,
+        board_id,
+    ):
+        board = self.get_board(
+            request,
+            board_id,
+        )
+
+        labels = board.labels.all()
+
+        serializer = LabelReadSerializer(
+            labels,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=LabelCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: LabelReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def post(
+        self,
+        request,
+        board_id,
+    ):
+        board = self.get_board(
+            request,
+            board_id,
+        )
+
+        if not CanManageBoardLabels().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanManageBoardLabels.message
+            )
+
+        serializer = LabelCreateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            label = create_label(
+                board=board,
+                name=serializer.validated_data["name"],
+                color=serializer.validated_data["color"],
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = LabelReadSerializer(
+            label,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class BoardLabelDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_board_and_label(
+        self,
+        request,
+        board_id,
+        label_id,
+    ):
+        board = _get_visible_board(
+            user=request.user,
+            board_id=board_id,
+        )
+
+        label = get_object_or_404(
+            Label,
+            pk=label_id,
+            board=board,
+        )
+
+        return board, label
+
+    @extend_schema(
+        request=LabelUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: LabelReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def patch(
+        self,
+        request,
+        board_id,
+        label_id,
+    ):
+        board, label = self.get_board_and_label(
+            request,
+            board_id,
+            label_id,
+        )
+
+        if not CanManageBoardLabels().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanManageBoardLabels.message
+            )
+
+        serializer = LabelUpdateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            label = update_label(
+                label=label,
+                **serializer.validated_data,
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = LabelReadSerializer(
+            label,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["collaboration"],
+    )
+    def delete(
+        self,
+        request,
+        board_id,
+        label_id,
+    ):
+        board, label = self.get_board_and_label(
+            request,
+            board_id,
+            label_id,
+        )
+
+        if not CanManageBoardLabels().has_object_permission(
+            request,
+            self,
+            board,
+        ):
+            raise PermissionDenied(
+                CanManageBoardLabels.message
+            )
+
+        delete_label(
+            label=label,
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+class CardLabelCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=CardLabelCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: CardLabelReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def post(
+        self,
+        request,
+        card_id,
+    ):
+        card = _get_visible_card(
+            user=request.user,
+            card_id=card_id,
+        )
+
+        if not CanManageCardLabels().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanManageCardLabels.message
+            )
+
+        serializer = CardLabelCreateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            label = Label.objects.get(
+                pk=serializer.validated_data["label_id"],
+                board_id=card.board_list.board_id,
+            )
+
+        except Label.DoesNotExist as exc:
+            raise ValidationError(
+                {
+                    "label_id": (
+                        "A label belonging to this card's board "
+                        "with this id was not found."
+                    )
+                }
+            ) from exc
+
+        try:
+            card_label = attach_label_to_card(
+                card=card,
+                label=label,
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        card_label = (
+            CardLabel.objects.select_related(
+                "label",
+                "label__board",
+            )
+            .get(pk=card_label.pk)
+        )
+
+        response_serializer = CardLabelReadSerializer(
+            card_label,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CardLabelDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["collaboration"],
+    )
+    def delete(
+        self,
+        request,
+        card_id,
+        label_id,
+    ):
+        card = _get_visible_card(
+            user=request.user,
+            card_id=card_id,
+        )
+
+        if not CanManageCardLabels().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanManageCardLabels.message
+            )
+
+        label = get_object_or_404(
+            Label,
+            pk=label_id,
+            board_id=card.board_list.board_id,
+        )
+
+        get_object_or_404(
+            CardLabel,
+            card=card,
+            label=label,
+        )
+
+        detach_label_from_card(
+            card=card,
+            label=label,
         )
 
         return Response(
