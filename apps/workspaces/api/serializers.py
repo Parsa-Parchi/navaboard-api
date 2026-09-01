@@ -79,7 +79,7 @@ class WorkspaceMembershipReadSerializer(serializers.ModelSerializer):
 
 
 class WorkspaceMemberCreateSerializer(serializers.Serializer):
-    user_id = serializers.UUIDField()
+    phone_number = serializers.CharField()
     role = serializers.ChoiceField(
         choices=(
             WorkspaceMembership.Role.ADMIN,
@@ -99,5 +99,5 @@ class WorkspaceMemberRoleUpdateSerializer(serializers.Serializer):
 
 
 class WorkspaceOwnershipTransferSerializer(serializers.Serializer):
-    new_owner_user_id = serializers.UUIDField()
+    new_owner_phone_number = serializers.CharField()
 
