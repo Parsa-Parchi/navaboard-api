@@ -190,14 +190,14 @@ def _get_member_workspace(
 def _get_board_workspace_membership(
     *,
     board: Board,
-    user_id,
+    phone_number,
 ) -> WorkspaceMembership:
     try:
         return WorkspaceMembership.objects.select_related(
             "user",
         ).get(
             workspace=board.workspace,
-            user_id=user_id,
+            user__phone_number=phone_number,
             user__is_active=True,
         )
     except WorkspaceMembership.DoesNotExist as exc:
@@ -527,7 +527,7 @@ class BoardMembershipListCreateAPIView(APIView):
         workspace_membership = (
             _get_board_workspace_membership(
                 board=board,
-                user_id=serializer.validated_data["user_id"],
+                phone_number=serializer.validated_data["phone_number"],
             )
         )
 

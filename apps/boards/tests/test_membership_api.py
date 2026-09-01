@@ -162,7 +162,7 @@ class BoardMembershipListCreateAPIViewTests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.workspace_member.id),
+                "phone_number": self.workspace_member.phone_number,
                 "role": BoardMembership.Role.MEMBER,
             },
             format="json",
@@ -197,7 +197,7 @@ class BoardMembershipListCreateAPIViewTests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.workspace_member.id),
+                "phone_number": self.workspace_member.phone_number,
                 "role": BoardMembership.Role.MEMBER,
             },
             format="json",
@@ -214,7 +214,7 @@ class BoardMembershipListCreateAPIViewTests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.outsider.id),
+                "phone_number": self.outsider.phone_number,
                 "role": BoardMembership.Role.MEMBER,
             },
             format="json",
@@ -236,7 +236,7 @@ class BoardMembershipListCreateAPIViewTests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.board_member.id),
+                "phone_number": self.board_member.phone_number,
                 "role": BoardMembership.Role.MEMBER,
             },
             format="json",
