@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from apps.boards.models import Board, Card
 from apps.workspaces.models import WorkspaceMembership
+from apps.core.models import SoftDeleteModel
 
 
 class CardAssignee(models.Model):
@@ -73,7 +74,7 @@ class CardAssignee(models.Model):
         return f"{self.user} - {self.card}"
 
 
-class Comment(models.Model):
+class Comment(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -92,8 +93,7 @@ class Comment(models.Model):
         related_name="authored_card_comments",
     )
     body = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ("created_at",)
@@ -118,7 +118,7 @@ class Comment(models.Model):
         return self.body[:80]
 
 
-class Label(models.Model):
+class Label(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -131,8 +131,7 @@ class Label(models.Model):
     )
     name = models.CharField(max_length=80)
     color = models.CharField(max_length=32)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ("created_at",)
@@ -214,7 +213,7 @@ class CardLabel(models.Model):
         return f"{self.card} - {self.label}"
 
 
-class Checklist(models.Model):
+class Checklist(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -227,8 +226,7 @@ class Checklist(models.Model):
     )
     title = models.CharField(max_length=120)
     position = models.PositiveIntegerField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ("position", "created_at")
@@ -257,7 +255,7 @@ class Checklist(models.Model):
         return f"{self.card} - {self.title}"
 
 
-class ChecklistItem(models.Model):
+class ChecklistItem(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -271,8 +269,7 @@ class ChecklistItem(models.Model):
     title = models.CharField(max_length=200)
     is_completed = models.BooleanField(default=False)
     position = models.PositiveIntegerField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ("position", "created_at")

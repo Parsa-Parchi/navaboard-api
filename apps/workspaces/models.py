@@ -3,17 +3,21 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from apps.core.models import SoftDeleteModel
 from django.db.models import Q
 
 
-class Workspace(models.Model):
+class Workspace(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
     )
+
     name = models.CharField(max_length=120)
+
     description = models.TextField(blank=True)
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -21,8 +25,6 @@ class Workspace(models.Model):
         on_delete=models.SET_NULL,
         related_name="created_workspaces",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-created_at",)

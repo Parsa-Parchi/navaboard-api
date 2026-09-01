@@ -40,6 +40,7 @@ from apps.boards.services.boards import (
     change_board_member_role,
     create_board,
     remove_board_member,
+    delete_board,
 )
 
 from apps.boards.services.lists import (
@@ -425,7 +426,9 @@ class BoardDetailAPIView(APIView):
                 IsBoardAdmin.message
             )
 
-        board.delete()
+        delete_board(
+            board=board,
+        )
 
         return Response(
             status=status.HTTP_204_NO_CONTENT,
