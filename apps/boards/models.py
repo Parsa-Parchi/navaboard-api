@@ -8,7 +8,10 @@ from django.db.models import Q
 from apps.workspaces.models import Workspace, WorkspaceMembership
 
 
-class Board(models.Model):
+from apps.core.models import SoftDeleteModel
+
+
+class Board(SoftDeleteModel):
     class Visibility(models.TextChoices):
         PRIVATE = "private", "Private"
         WORKSPACE = "workspace", "Workspace"
@@ -37,8 +40,6 @@ class Board(models.Model):
         on_delete=models.SET_NULL,
         related_name="created_boards",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-created_at",)
@@ -144,7 +145,7 @@ class BoardMembership(models.Model):
         return f"{self.user} - {self.board} ({self.role})"
 
 
-class BoardList(models.Model):
+class BoardList(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -157,8 +158,7 @@ class BoardList(models.Model):
     )
     title = models.CharField(max_length=120)
     position = models.PositiveIntegerField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ("position", "created_at")
@@ -169,6 +169,7 @@ class BoardList(models.Model):
             ),
             models.UniqueConstraint(
                 fields=("board", "position"),
+                condition=Q(deleted_at__isnull=True),
                 name="board_list_unique_position",
             ),
         ]
@@ -183,7 +184,7 @@ class BoardList(models.Model):
         return f"{self.board} - {self.title}"
 
 
-class Card(models.Model):
+class Card(SoftDeleteModel):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -205,8 +206,7 @@ class Card(models.Model):
         on_delete=models.SET_NULL,
         related_name="created_cards",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         ordering = ("position", "created_at")
@@ -217,6 +217,7 @@ class Card(models.Model):
             ),
             models.UniqueConstraint(
                 fields=("board_list", "position"),
+                condition=Q(deleted_at__isnull=True),
                 name="card_unique_list_position",
             ),
         ]

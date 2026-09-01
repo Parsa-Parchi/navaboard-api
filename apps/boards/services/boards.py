@@ -1,9 +1,14 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.boards.models import Board, BoardMembership
+from apps.boards.models import (
+    Board,
+    BoardMembership,
+    BoardList,
+    Card,
+)
 from apps.workspaces.models import Workspace, WorkspaceMembership
-
+from django.utils import timezone
 
 @transaction.atomic
 def create_board(
@@ -82,3 +87,26 @@ def remove_board_member(*, membership: BoardMembership) -> None:
     )
     locked_membership.delete()
 
+@transaction.atomic
+def delete_board(*, board: Board) -> None:
+    locked_board = Board.objects.select_for_update().get(
+        pk=board.pk
+    )
+
+    lists = BoardList.objects.select_for_update().filter(
+        board=locked_board
+    )
+
+    cards = Card.objects.select_for_update().filter(
+        board_list__in=lists
+    )
+
+    cards.update(
+        deleted_at=timezone.now()
+    )
+
+    lists.update(
+        deleted_at=timezone.now()
+    )
+
+    locked_board.delete()

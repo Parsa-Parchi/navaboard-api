@@ -1,0 +1,2267 @@
+openapi: 3.0.3
+info:
+  title: NavaBoard API
+  version: 0.1.0
+  description: API documentation for the NavaBoard project.
+paths:
+  /api/auth/email/login/:
+    post:
+      operationId: auth_email_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailPasswordLogin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailPasswordLogin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailPasswordLogin'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPVerificationResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/email/signup/confirm/:
+    post:
+      operationId: auth_email_signup_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailSignupConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailSignupConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailSignupConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailSignupConfirmResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/email/signup/request/:
+    post:
+      operationId: auth_email_signup_request_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailSignupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailSignupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailSignupRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailSignupRequestResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/email/verification/confirm/:
+    post:
+      operationId: auth_email_verification_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationConfirm'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationConfirmResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/email/verification/request/:
+    post:
+      operationId: auth_email_verification_request_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationRequestResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+          description: ''
+  /api/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserProfile'
+          description: ''
+    put:
+      operationId: auth_me_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurrentUserProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CurrentUserProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CurrentUserProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserProfile'
+          description: ''
+    patch:
+      operationId: auth_me_partial_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUserProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUserProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCurrentUserProfile'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserProfile'
+          description: ''
+  /api/auth/otp/request/:
+    post:
+      operationId: auth_otp_request_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPRequestResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/otp/verify/:
+    post:
+      operationId: auth_otp_verify_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerification'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPVerification'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPVerification'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPVerificationResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/password/change/:
+    post:
+      operationId: auth_password_change_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/password/reset/confirm/:
+    post:
+      operationId: auth_password_reset_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirmResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/password/reset/request/:
+    post:
+      operationId: auth_password_reset_request_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetRequestResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/password/set/:
+    post:
+      operationId: auth_password_set_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetInitialPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetInitialPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetInitialPassword'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/phone/change/confirm/:
+    post:
+      operationId: auth_phone_change_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneChangeConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhoneChangeConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhoneChangeConfirm'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhoneChangeConfirmResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/phone/change/request/:
+    post:
+      operationId: auth_phone_change_request_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhoneChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhoneChangeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhoneChangeRequestResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThrottledResponse'
+          description: ''
+  /api/boards/{board_id}/:
+    get:
+      operationId: boards_retrieve
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardDetailRead'
+          description: ''
+    patch:
+      operationId: boards_partial_update
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardRead'
+          description: ''
+    delete:
+      operationId: boards_destroy
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/boards/{board_id}/cards/{card_id}/:
+    get:
+      operationId: boards_cards_retrieve
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardRead'
+          description: ''
+    patch:
+      operationId: boards_cards_partial_update
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCardUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCardUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCardUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardRead'
+          description: ''
+    delete:
+      operationId: boards_cards_destroy
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/boards/{board_id}/cards/{card_id}/move/:
+    post:
+      operationId: boards_cards_move_create
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardMove'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CardMove'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CardMove'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardRead'
+          description: ''
+  /api/boards/{board_id}/lists/:
+    get:
+      operationId: boards_lists_list
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoardListRead'
+          description: ''
+    post:
+      operationId: boards_lists_create
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardListCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BoardListCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BoardListCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardListRead'
+          description: ''
+  /api/boards/{board_id}/lists/{list_id}/:
+    patch:
+      operationId: boards_lists_partial_update
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardListUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardListUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardListUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardListRead'
+          description: ''
+    delete:
+      operationId: boards_lists_destroy
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/boards/{board_id}/lists/{list_id}/cards/:
+    get:
+      operationId: boards_lists_cards_list
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CardRead'
+          description: ''
+    post:
+      operationId: boards_lists_cards_create
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CardCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CardCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardRead'
+          description: ''
+  /api/boards/{board_id}/lists/{list_id}/move/:
+    post:
+      operationId: boards_lists_move_create
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardListMove'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BoardListMove'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BoardListMove'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardListRead'
+          description: ''
+  /api/boards/{board_id}/members/:
+    get:
+      operationId: boards_members_list
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoardMembershipRead'
+          description: ''
+    post:
+      operationId: boards_members_create
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardMemberCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BoardMemberCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BoardMemberCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardMembershipRead'
+          description: ''
+  /api/boards/{board_id}/members/{membership_id}/:
+    patch:
+      operationId: boards_members_partial_update
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardMemberRoleUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardMemberRoleUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBoardMemberRoleUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardMembershipRead'
+          description: ''
+    delete:
+      operationId: boards_members_destroy
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/workspaces/:
+    get:
+      operationId: workspaces_list
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceRead'
+          description: ''
+    post:
+      operationId: workspaces_create
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRead'
+          description: ''
+  /api/workspaces/{workspace_id}/:
+    get:
+      operationId: workspaces_retrieve
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRead'
+          description: ''
+    patch:
+      operationId: workspaces_partial_update
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceWrite'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRead'
+          description: ''
+  /api/workspaces/{workspace_id}/boards/:
+    get:
+      operationId: workspaces_boards_list
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BoardRead'
+          description: ''
+    post:
+      operationId: workspaces_boards_create
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - boards
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoardWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BoardWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BoardWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardRead'
+          description: ''
+  /api/workspaces/{workspace_id}/members/:
+    get:
+      operationId: workspaces_members_list
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceMembershipRead'
+          description: ''
+    post:
+      operationId: workspaces_members_create
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipRead'
+          description: ''
+  /api/workspaces/{workspace_id}/members/{membership_id}/:
+    patch:
+      operationId: workspaces_members_partial_update
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceMemberRoleUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceMemberRoleUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceMemberRoleUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipRead'
+          description: ''
+    delete:
+      operationId: workspaces_members_destroy
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/workspaces/{workspace_id}/transfer-ownership/:
+    post:
+      operationId: workspaces_transfer_ownership_create
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceOwnershipTransfer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceOwnershipTransfer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceOwnershipTransfer'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipRead'
+          description: ''
+components:
+  schemas:
+    AuthenticatedUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone_number:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        full_name:
+          type: string
+        is_phone_verified:
+          type: boolean
+      required:
+      - email
+      - full_name
+      - id
+      - is_phone_verified
+      - phone_number
+    BoardDetailRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/BoardVisibility'
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        current_user_role:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        lists:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardListWithCardsRead'
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - current_user_role
+      - id
+      - lists
+      - name
+      - updated_at
+      - workspace_id
+    BoardListCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - title
+    BoardListMove:
+      type: object
+      properties:
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - position
+    BoardListRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 120
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - board_id
+      - created_at
+      - id
+      - position
+      - title
+      - updated_at
+    BoardListWithCardsRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 120
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardRead'
+          readOnly: true
+      required:
+      - board_id
+      - cards
+      - created_at
+      - id
+      - position
+      - title
+      - updated_at
+    BoardMemberCreate:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceAssignableRole'
+          default: member
+      required:
+      - user_id
+    BoardMemberUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 150
+      required:
+      - id
+    BoardMembershipRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_membership_id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/BoardMemberUser'
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/BoardRole'
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - board_id
+      - id
+      - joined_at
+      - user
+      - workspace_membership_id
+    BoardRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/BoardVisibility'
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        current_user_role:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - current_user_role
+      - id
+      - name
+      - updated_at
+      - workspace_id
+    BoardRole:
+      enum:
+      - admin
+      - member
+      type: string
+      description: |-
+        * `admin` - Admin
+        * `member` - Member
+    BoardVisibility:
+      enum:
+      - private
+      - workspace
+      type: string
+      description: |-
+        * `private` - Private
+        * `workspace` - Workspace
+    BoardWrite:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/BoardVisibility'
+      required:
+      - name
+    CardCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          default: ''
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - title
+    CardMove:
+      type: object
+      properties:
+        destination_list_id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - destination_list_id
+      - position
+    CardRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_list_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - board_list_id
+      - created_at
+      - created_by
+      - id
+      - position
+      - title
+      - updated_at
+    ChangePassword:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+        new_password:
+          type: string
+          writeOnly: true
+      required:
+      - current_password
+      - new_password
+    CurrentUserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        phone_number:
+          type: string
+          readOnly: true
+          nullable: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        full_name:
+          type: string
+          maxLength: 150
+        is_phone_verified:
+          type: boolean
+          readOnly: true
+        is_email_verified:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - id
+      - is_email_verified
+      - is_phone_verified
+      - phone_number
+      - updated_at
+    EmailPasswordLogin:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    EmailSignupConfirmRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+      required:
+      - code
+      - email
+    EmailSignupConfirmResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        token_type:
+          type: string
+        user:
+          $ref: '#/components/schemas/AuthenticatedUser'
+      required:
+      - access
+      - token_type
+      - user
+    EmailSignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+        full_name:
+          type: string
+          maxLength: 150
+      required:
+      - email
+      - password
+    EmailSignupRequestResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        development_email_verification_code:
+          type: string
+      required:
+      - detail
+      - expires_at
+    EmailVerificationConfirm:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          writeOnly: true
+        code:
+          type: string
+          writeOnly: true
+          maxLength: 6
+      required:
+      - code
+      - email
+    EmailVerificationConfirmResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        email:
+          type: string
+          format: email
+        is_email_verified:
+          type: boolean
+      required:
+      - detail
+      - email
+      - is_email_verified
+    EmailVerificationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          writeOnly: true
+      required:
+      - email
+    EmailVerificationRequestResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        development_verification_code:
+          type: string
+      required:
+      - detail
+      - expires_at
+    LogoutResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    OTPRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          writeOnly: true
+          maxLength: 32
+      required:
+      - phone_number
+    OTPRequestResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        development_otp_code:
+          type: string
+      required:
+      - detail
+      - expires_at
+    OTPVerification:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          writeOnly: true
+          maxLength: 32
+        code:
+          type: string
+          writeOnly: true
+          maxLength: 6
+      required:
+      - code
+      - phone_number
+    OTPVerificationResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        token_type:
+          type: string
+        user_created:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/AuthenticatedUser'
+      required:
+      - access
+      - token_type
+      - user
+      - user_created
+    PasswordResetConfirm:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          writeOnly: true
+        code:
+          type: string
+          writeOnly: true
+          maxLength: 6
+        new_password:
+          type: string
+          writeOnly: true
+      required:
+      - code
+      - new_password
+      - phone_number
+    PasswordResetConfirmResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    PasswordResetRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          writeOnly: true
+      required:
+      - phone_number
+    PasswordResetRequestResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        development_otp_code:
+          type: string
+      required:
+      - detail
+      - expires_at
+    PatchedBoardListUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+    PatchedBoardMemberRoleUpdate:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceAssignableRole'
+    PatchedBoardWrite:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/BoardVisibility'
+    PatchedCardUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+    PatchedCurrentUserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        phone_number:
+          type: string
+          readOnly: true
+          nullable: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        full_name:
+          type: string
+          maxLength: 150
+        is_phone_verified:
+          type: boolean
+          readOnly: true
+        is_email_verified:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedWorkspaceMemberRoleUpdate:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceAssignableRole'
+    PatchedWorkspaceWrite:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+    PhoneChangeConfirm:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          writeOnly: true
+        code:
+          type: string
+          writeOnly: true
+          maxLength: 6
+      required:
+      - code
+      - phone_number
+    PhoneChangeConfirmResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        phone_number:
+          type: string
+        is_phone_verified:
+          type: boolean
+      required:
+      - detail
+      - is_phone_verified
+      - phone_number
+    PhoneChangeRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          writeOnly: true
+      required:
+      - phone_number
+    PhoneChangeRequestResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        development_otp_code:
+          type: string
+      required:
+      - detail
+      - expires_at
+    SetInitialPassword:
+      type: object
+      properties:
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - password
+    ThrottledResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    TokenRefreshResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        token_type:
+          type: string
+      required:
+      - access
+      - token_type
+    WorkspaceAssignableRole:
+      enum:
+      - admin
+      - member
+      type: string
+      description: |-
+        * `admin` - admin
+        * `member` - member
+    WorkspaceMemberCreate:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceAssignableRole'
+          default: member
+      required:
+      - user_id
+    WorkspaceMemberUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 150
+      required:
+      - id
+    WorkspaceMembershipRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceMemberUser'
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - id
+      - joined_at
+      - user
+      - workspace_id
+    WorkspaceOwnershipTransfer:
+      type: object
+      properties:
+        new_owner_user_id:
+          type: string
+          format: uuid
+      required:
+      - new_owner_user_id
+    WorkspaceRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        current_user_role:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - current_user_role
+      - id
+      - name
+      - updated_at
+    WorkspaceRole:
+      enum:
+      - owner
+      - admin
+      - member
+      type: string
+      description: |-
+        * `owner` - Owner
+        * `admin` - Admin
+        * `member` - Member
+    WorkspaceWrite:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+      required:
+      - name
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
