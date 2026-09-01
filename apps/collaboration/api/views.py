@@ -164,7 +164,7 @@ def _get_visible_board(
 def _get_card_workspace_membership(
     *,
     card: Card,
-    user_id,
+    phone_number,
 ) -> WorkspaceMembership:
     workspace = card.board_list.board.workspace
 
@@ -175,7 +175,7 @@ def _get_card_workspace_membership(
             )
             .get(
                 workspace=workspace,
-                user_id=user_id,
+                user__phone_number=phone_number,
                 user__is_active=True,
             )
         )
@@ -183,10 +183,10 @@ def _get_card_workspace_membership(
     except WorkspaceMembership.DoesNotExist as exc:
         raise ValidationError(
             {
-                "user_id": (
-                    "An active member of this card's workspace "
-                    "with this id was not found."
-                )
+                "phone_number": (
+    "An active member of this card's workspace "
+    "with this phone number was not found."
+)
             }
         ) from exc
 
@@ -331,8 +331,8 @@ class CardAssigneeListCreateAPIView(APIView):
         workspace_membership = (
             _get_card_workspace_membership(
                 card=card,
-                user_id=serializer.validated_data[
-                    "user_id"
+                phone_number=serializer.validated_data[
+                    "phone_number"
                 ],
             )
         )
