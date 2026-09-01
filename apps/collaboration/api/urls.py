@@ -10,6 +10,12 @@ from apps.collaboration.api.views import (
     BoardLabelListCreateAPIView,
     CardLabelCreateAPIView,
     CardLabelDetailAPIView,
+    ChecklistDetailAPIView,
+    ChecklistItemCreateAPIView,
+    ChecklistItemDetailAPIView,
+    ChecklistItemMoveAPIView,
+    ChecklistListCreateAPIView,
+    ChecklistMoveAPIView,
 )
 
 
@@ -57,5 +63,36 @@ urlpatterns = [
         "cards/<uuid:card_id>/labels/<uuid:label_id>/",
         CardLabelDetailAPIView.as_view(),
         name="card-label-detail",
+    ),
+
+    path(
+        "cards/<uuid:card_id>/checklists/",
+        ChecklistListCreateAPIView.as_view(),
+        name="checklist-list",
+    ),
+    path(
+        "checklists/<uuid:checklist_id>/",
+        ChecklistDetailAPIView.as_view(),
+        name="checklist-detail",
+    ),
+    path(
+        "checklists/<uuid:checklist_id>/move/",
+        ChecklistMoveAPIView.as_view(),
+        name="checklist-move",
+    ),
+    path(
+        "checklists/<uuid:checklist_id>/items/",
+        ChecklistItemCreateAPIView.as_view(),
+        name="checklist-item-create",
+    ),
+    path(
+        "checklist-items/<uuid:item_id>/",
+        ChecklistItemDetailAPIView.as_view(),
+        name="checklist-item-detail",
+    ),
+    path(
+        "checklist-items/<uuid:item_id>/move/",
+        ChecklistItemMoveAPIView.as_view(),
+        name="checklist-item-move",
     ),
 ]

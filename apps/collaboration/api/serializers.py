@@ -6,6 +6,8 @@ from apps.collaboration.models import (
     CardLabel,
     Comment,
     Label,
+    Checklist,
+    ChecklistItem,
 )
 
 
@@ -219,3 +221,126 @@ class CardLabelReadSerializer(serializers.ModelSerializer):
             "card_id",
             "label",
         )
+
+class ChecklistItemReadSerializer(
+    serializers.ModelSerializer
+):
+    checklist_id = serializers.UUIDField(
+        read_only=True,
+    )
+
+    class Meta:
+        model = ChecklistItem
+        fields = (
+            "id",
+            "checklist_id",
+            "title",
+            "is_completed",
+            "position",
+            "created_at",
+            "updated_at",
+        )
+
+
+class ChecklistReadSerializer(
+    serializers.ModelSerializer
+):
+    card_id = serializers.UUIDField(
+        read_only=True,
+    )
+
+    items = ChecklistItemReadSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta:
+        model = Checklist
+        fields = (
+            "id",
+            "card_id",
+            "title",
+            "position",
+            "items",
+            "created_at",
+            "updated_at",
+        )
+
+
+class ChecklistCreateSerializer(
+    serializers.Serializer
+):
+    title = serializers.CharField(
+        max_length=120,
+    )
+
+    def validate_title(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Checklist title is required."
+            )
+
+        return value
+
+
+class ChecklistUpdateSerializer(
+    ChecklistCreateSerializer
+):
+    pass
+
+
+class PositionSerializer(serializers.Serializer):
+    position = serializers.IntegerField(
+        min_value=0,
+    )
+
+
+class ChecklistItemCreateSerializer(
+    serializers.Serializer
+):
+    title = serializers.CharField(
+        max_length=200,
+    )
+
+    def validate_title(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Checklist item title is required."
+            )
+
+        return value
+
+
+class ChecklistItemUpdateSerializer(
+    serializers.Serializer
+):
+    title = serializers.CharField(
+        max_length=200,
+        required=False,
+    )
+
+    is_completed = serializers.BooleanField(
+        required=False,
+    )
+
+    def validate_title(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Checklist item title is required."
+            )
+
+        return value
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError(
+                "At least one field must be provided."
+            )
+
+        return attrs
