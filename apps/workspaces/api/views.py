@@ -66,14 +66,18 @@ def _get_visible_workspace(*, user, workspace_id) -> Workspace:
     )
 
 
-def _get_active_user(*, user_id):
+def _get_active_user(*, phone_number):
     try:
-        return User.objects.get(pk=user_id, is_active=True)
+        return User.objects.get(
+            phone_number=phone_number,
+            is_active=True,
+        )
     except User.DoesNotExist as exc:
         raise ValidationError(
-            {"user_id": "An active user with this id was not found."}
+            {
+                "phone_number": "An active user with this phone number was not found."
+            }
         ) from exc
-
 
 class WorkspaceListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -207,7 +211,11 @@ class WorkspaceMembershipListCreateAPIView(APIView):
         ):
             raise PermissionDenied("Administrators may only add regular members.")
 
-        user = _get_active_user(user_id=serializer.validated_data["user_id"])
+        user = _get_active_user(
+            phone_number=serializer.validated_data["phone_number"]
+        )
+
+
         try:
             membership = add_workspace_member(
                 workspace=workspace,
@@ -317,9 +325,11 @@ class WorkspaceOwnershipTransferAPIView(APIView):
 
         serializer = WorkspaceOwnershipTransferSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         new_owner = _get_active_user(
-            user_id=serializer.validated_data["new_owner_user_id"]
+            phone_number=serializer.validated_data["new_owner_phone_number"]
         )
+
 
         try:
             membership = transfer_workspace_ownership(

@@ -168,7 +168,7 @@ class WorkspaceMembershipAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.list_url,
-            data={"user_id": str(new_user.id), "role": "admin"},
+            data={"phone_number": new_user.phone_number, "role": "admin"},
             format="json",
         )
 
@@ -181,7 +181,7 @@ class WorkspaceMembershipAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.list_url,
-            data={"user_id": str(new_user.id)},
+            data={"phone_number": new_user.phone_number},
             format="json",
         )
 
@@ -194,7 +194,7 @@ class WorkspaceMembershipAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.list_url,
-            data={"user_id": str(new_user.id), "role": "admin"},
+            data={"phone_number": new_user.phone_number, "role": "admin"},
             format="json",
         )
 
@@ -212,7 +212,7 @@ class WorkspaceMembershipAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.list_url,
-            data={"user_id": str(new_user.id)},
+            data={"phone_number": new_user.phone_number},
             format="json",
         )
 
@@ -223,7 +223,7 @@ class WorkspaceMembershipAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.list_url,
-            data={"user_id": str(self.member.id)},
+            data={"phone_number": self.member.phone_number},
             format="json",
         )
 
@@ -304,7 +304,7 @@ class WorkspaceOwnershipTransferAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.url,
-            data={"new_owner_user_id": str(self.member.id)},
+            data={"new_owner_phone_number": self.member.phone_number},
             format="json",
         )
 
@@ -320,7 +320,7 @@ class WorkspaceOwnershipTransferAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.url,
-            data={"new_owner_user_id": str(self.owner.id)},
+            data={"new_owner_phone_number": self.owner.phone_number},
             format="json",
         )
 
@@ -331,7 +331,7 @@ class WorkspaceOwnershipTransferAPIViewTests(WorkspaceAPITestCase):
 
         response = self.client.post(
             self.url,
-            data={"new_owner_user_id": str(self.outsider.id)},
+            data={"new_owner_phone_number": self.outsider.phone_number},
             format="json",
         )
 
