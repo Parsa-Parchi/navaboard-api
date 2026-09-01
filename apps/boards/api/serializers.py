@@ -147,7 +147,7 @@ class BoardMembershipReadSerializer(serializers.ModelSerializer):
 
 
 class BoardMemberCreateSerializer(serializers.Serializer):
-    user_id = serializers.UUIDField()
+    phone_number = serializers.CharField()
     role = serializers.ChoiceField(
         choices=(
             BoardMembership.Role.ADMIN,
