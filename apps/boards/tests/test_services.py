@@ -2,12 +2,17 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from apps.boards.models import BoardMembership
+from apps.boards.models import (
+    BoardMembership,
+    BoardList,
+    Card,
+)
 from apps.boards.services.boards import (
     add_board_member,
     change_board_member_role,
     create_board,
     remove_board_member,
+    delete_board,
 )
 from apps.boards.services.cards import create_card, delete_card, move_card
 from apps.boards.services.lists import (
@@ -95,6 +100,36 @@ class BoardServiceTests(TestCase):
                 board=board,
                 workspace_membership=other_membership,
             )
+
+    def test_deletes_board_with_soft_delete_cascade(self):
+        board = create_board(
+            workspace=self.workspace,
+            creator=self.owner,
+            name="Delete Test Board",
+        )
+
+        board_list = create_board_list(
+            board=board,
+            title="Todo",
+        )
+
+        card = create_card(
+            board_list=board_list,
+            creator=self.owner,
+            title="Test Card",
+        )
+
+        delete_board(
+            board=board,
+        )
+
+        board.refresh_from_db()
+        board_list.refresh_from_db()
+        card.refresh_from_db()
+
+        self.assertIsNotNone(board.deleted_at)
+        self.assertIsNotNone(board_list.deleted_at)
+        self.assertIsNotNone(card.deleted_at)
 
 
 class BoardListServiceTests(TestCase):
