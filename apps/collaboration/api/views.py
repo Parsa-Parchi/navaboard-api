@@ -30,12 +30,21 @@ from apps.collaboration.api.serializers import (
     LabelCreateSerializer,
     LabelReadSerializer,
     LabelUpdateSerializer,
+    ChecklistCreateSerializer,
+    ChecklistItemCreateSerializer,
+    ChecklistItemReadSerializer,
+    ChecklistItemUpdateSerializer,
+    ChecklistReadSerializer,
+    ChecklistUpdateSerializer,
+    PositionSerializer,
 )
 from apps.collaboration.models import (
     CardAssignee,
     Comment,
     CardLabel,
     Label,
+    Checklist,
+    ChecklistItem,
 )
 
 from apps.collaboration.services.labels import (
@@ -55,6 +64,19 @@ from apps.collaboration.services.comments import (
     delete_comment,
     update_comment,
 )
+
+
+from apps.collaboration.services.checklists import (
+    create_checklist,
+    create_checklist_item,
+    delete_checklist,
+    delete_checklist_item,
+    move_checklist,
+    move_checklist_item,
+    update_checklist,
+    update_checklist_item,
+)
+
 from apps.workspaces.models import WorkspaceMembership
 
 
@@ -167,6 +189,50 @@ def _get_card_workspace_membership(
                 )
             }
         ) from exc
+
+def _get_visible_checklist(
+    *,
+    user,
+    checklist_id,
+) -> Checklist:
+    checklist = get_object_or_404(
+        Checklist.objects.select_related(
+            "card",
+            "card__board_list",
+            "card__board_list__board",
+        ),
+        pk=checklist_id,
+    )
+
+    _get_visible_card(
+        user=user,
+        card_id=checklist.card_id,
+    )
+
+    return checklist
+
+
+def _get_visible_checklist_item(
+    *,
+    user,
+    item_id,
+) -> ChecklistItem:
+    item = get_object_or_404(
+        ChecklistItem.objects.select_related(
+            "checklist",
+            "checklist__card",
+            "checklist__card__board_list",
+            "checklist__card__board_list__board",
+        ),
+        pk=item_id,
+    )
+
+    _get_visible_card(
+        user=user,
+        card_id=item.checklist.card_id,
+    )
+
+    return item
 
 
 class CardAssigneeListCreateAPIView(APIView):
@@ -934,4 +1000,461 @@ class CardLabelDetailAPIView(APIView):
 
         return Response(
             status=status.HTTP_204_NO_CONTENT,
+        )
+
+class ChecklistListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: ChecklistReadSerializer(
+                many=True,
+            )
+        },
+        tags=["collaboration"],
+    )
+    def get(
+        self,
+        request,
+        card_id,
+    ):
+        card = _get_visible_card(
+            user=request.user,
+            card_id=card_id,
+        )
+
+        if not CanViewBoard().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanViewBoard.message
+            )
+
+        checklists = (
+            card.checklists.prefetch_related(
+                "items",
+            )
+        )
+
+        serializer = ChecklistReadSerializer(
+            checklists,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=ChecklistCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: ChecklistReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def post(
+        self,
+        request,
+        card_id,
+    ):
+        card = _get_visible_card(
+            user=request.user,
+            card_id=card_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = ChecklistCreateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            checklist = create_checklist(
+                card=card,
+                title=serializer.validated_data[
+                    "title"
+                ],
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = ChecklistReadSerializer(
+            checklist,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ChecklistDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=ChecklistUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: ChecklistReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def patch(
+        self,
+        request,
+        checklist_id,
+    ):
+        checklist = _get_visible_checklist(
+            user=request.user,
+            checklist_id=checklist_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = ChecklistUpdateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            checklist = update_checklist(
+                checklist=checklist,
+                title=serializer.validated_data[
+                    "title"
+                ],
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = ChecklistReadSerializer(
+            checklist,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["collaboration"],
+    )
+    def delete(
+        self,
+        request,
+        checklist_id,
+    ):
+        checklist = _get_visible_checklist(
+            user=request.user,
+            checklist_id=checklist_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        delete_checklist(
+            checklist=checklist,
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class ChecklistMoveAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=PositionSerializer,
+        responses={
+            status.HTTP_200_OK: ChecklistReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def post(
+        self,
+        request,
+        checklist_id,
+    ):
+        checklist = _get_visible_checklist(
+            user=request.user,
+            checklist_id=checklist_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = PositionSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            checklist = move_checklist(
+                checklist=checklist,
+                position=serializer.validated_data[
+                    "position"
+                ],
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = ChecklistReadSerializer(
+            checklist,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+class ChecklistItemCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=ChecklistItemCreateSerializer,
+        responses={
+            status.HTTP_201_CREATED: ChecklistItemReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def post(
+        self,
+        request,
+        checklist_id,
+    ):
+        checklist = _get_visible_checklist(
+            user=request.user,
+            checklist_id=checklist_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = ChecklistItemCreateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            item = create_checklist_item(
+                checklist=checklist,
+                title=serializer.validated_data[
+                    "title"
+                ],
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = ChecklistItemReadSerializer(
+            item,
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ChecklistItemDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=ChecklistItemUpdateSerializer,
+        responses={
+            status.HTTP_200_OK: ChecklistItemReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def patch(
+        self,
+        request,
+        item_id,
+    ):
+        item = _get_visible_checklist_item(
+            user=request.user,
+            item_id=item_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            item.checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = ChecklistItemUpdateSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            item = update_checklist_item(
+                item=item,
+                **serializer.validated_data,
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = (
+            ChecklistItemReadSerializer(
+                item,
+            )
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None
+        },
+        tags=["collaboration"],
+    )
+    def delete(
+        self,
+        request,
+        item_id,
+    ):
+        item = _get_visible_checklist_item(
+            user=request.user,
+            item_id=item_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            item.checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        delete_checklist_item(
+            item=item,
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class ChecklistItemMoveAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=PositionSerializer,
+        responses={
+            status.HTTP_200_OK: ChecklistItemReadSerializer
+        },
+        tags=["collaboration"],
+    )
+    def post(
+        self,
+        request,
+        item_id,
+    ):
+        item = _get_visible_checklist_item(
+            user=request.user,
+            item_id=item_id,
+        )
+
+        if not CanEditBoard().has_object_permission(
+            request,
+            self,
+            item.checklist.card,
+        ):
+            raise PermissionDenied(
+                CanEditBoard.message
+            )
+
+        serializer = PositionSerializer(
+            data=request.data,
+        )
+
+        serializer.is_valid(
+            raise_exception=True,
+        )
+
+        try:
+            item = move_checklist_item(
+                item=item,
+                position=serializer.validated_data[
+                    "position"
+                ],
+            )
+
+        except DjangoValidationError as exc:
+            _raise_api_validation_error(exc)
+
+        response_serializer = (
+            ChecklistItemReadSerializer(
+                item,
+            )
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_200_OK,
         )
