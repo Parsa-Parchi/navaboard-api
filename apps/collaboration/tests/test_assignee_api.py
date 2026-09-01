@@ -186,7 +186,7 @@ class CardAssigneeListCreateAPITests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.workspace_member.id),
+                "phone_number": self.workspace_member.phone_number,
             },
             format="json",
         )
@@ -209,7 +209,7 @@ class CardAssigneeListCreateAPITests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.workspace_member.id),
+                "phone_number": self.workspace_member.phone_number,
             },
             format="json",
         )
@@ -227,7 +227,7 @@ class CardAssigneeListCreateAPITests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.outsider.id),
+                "phone_number": self.outsider.phone_number,
             },
             format="json",
         )
@@ -238,7 +238,7 @@ class CardAssigneeListCreateAPITests(
         )
 
         self.assertIn(
-            "user_id",
+            "phone_number",
             response.data,
         )
 
@@ -258,7 +258,7 @@ class CardAssigneeListCreateAPITests(
         response = self.client.post(
             self.list_url,
             data={
-                "user_id": str(self.workspace_member.id),
+                "phone_number": self.workspace_member.phone_number,
             },
             format="json",
         )

@@ -56,7 +56,7 @@ class CardAssigneeReadSerializer(serializers.ModelSerializer):
 
 
 class CardAssigneeCreateSerializer(serializers.Serializer):
-    user_id = serializers.UUIDField()
+    phone_number = serializers.CharField()
 
 class CommentAuthorSerializer(serializers.ModelSerializer):
     class Meta:
