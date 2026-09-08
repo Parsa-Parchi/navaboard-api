@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -211,18 +211,38 @@ def _get_board_workspace_membership(
         ) from exc
 
 
+
+
+
+
+@extend_schema_view(
+    get=extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="List boards in workspace",
+    ),
+    post=extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="Create board in workspace",
+    ),
+)
 class BoardListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="List boards in workspace",
         responses={
-            status.HTTP_200_OK: BoardReadSerializer(
-                many=True
-            )
+            status.HTTP_200_OK: BoardReadSerializer(many=True)
         },
-        tags=["boards"],
     )
-    def get(self, request, workspace_id):
+    def get(
+        self,
+        request,
+        workspace_id,
+    ):
         workspace = _get_member_workspace(
             user=request.user,
             workspace_id=workspace_id,
@@ -248,13 +268,19 @@ class BoardListCreateAPIView(APIView):
         )
 
     @extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="Create board in workspace",
         request=BoardWriteSerializer,
         responses={
             status.HTTP_201_CREATED: BoardReadSerializer
         },
-        tags=["boards"],
     )
-    def post(self, request, workspace_id):
+    def post(
+        self,
+        request,
+        workspace_id,
+    ):
         workspace = _get_member_workspace(
             user=request.user,
             workspace_id=workspace_id,
@@ -263,6 +289,7 @@ class BoardListCreateAPIView(APIView):
         serializer = BoardWriteSerializer(
             data=request.data,
         )
+
         serializer.is_valid(
             raise_exception=True,
         )
@@ -290,6 +317,23 @@ class BoardListCreateAPIView(APIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="Get board details",
+    ),
+    patch=extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="Update board",
+    ),
+    delete=extend_schema(
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
+        summary="Delete board",
+    ),
+)
 class BoardDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -315,15 +359,17 @@ class BoardDetailAPIView(APIView):
         return board
 
     @extend_schema(
+        summary="Get board details",
         responses={
             status.HTTP_200_OK: BoardDetailReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def get(
-            self,
-            request,
-            board_id,
+        self,
+        request,
+        board_id,
     ):
         board = _get_visible_board_detail(
             user=request.user,
@@ -331,9 +377,9 @@ class BoardDetailAPIView(APIView):
         )
 
         if not CanViewBoard().has_object_permission(
-                request,
-                self,
-                board,
+            request,
+            self,
+            board,
         ):
             raise PermissionDenied(
                 CanViewBoard.message
@@ -352,11 +398,13 @@ class BoardDetailAPIView(APIView):
         )
 
     @extend_schema(
+        summary="Update board",
         request=BoardWriteSerializer,
         responses={
             status.HTTP_200_OK: BoardReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def patch(
         self,
@@ -402,10 +450,12 @@ class BoardDetailAPIView(APIView):
         )
 
     @extend_schema(
+        summary="Delete board",
         responses={
             status.HTTP_204_NO_CONTENT: None
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def delete(
         self,
@@ -433,8 +483,6 @@ class BoardDetailAPIView(APIView):
         return Response(
             status=status.HTTP_204_NO_CONTENT,
         )
-
-
 class BoardMembershipListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -465,7 +513,8 @@ class BoardMembershipListCreateAPIView(APIView):
                 many=True
             )
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def get(
         self,
@@ -496,7 +545,8 @@ class BoardMembershipListCreateAPIView(APIView):
         responses={
             status.HTTP_201_CREATED: BoardMembershipReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def post(
         self,
@@ -584,7 +634,8 @@ class BoardMembershipDetailAPIView(APIView):
         responses={
             status.HTTP_200_OK: BoardMembershipReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def patch(
         self,
@@ -641,7 +692,8 @@ class BoardMembershipDetailAPIView(APIView):
         responses={
             status.HTTP_204_NO_CONTENT: None
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def delete(
         self,
@@ -682,6 +734,21 @@ class BoardMembershipDetailAPIView(APIView):
             status=status.HTTP_204_NO_CONTENT,
         )
 
+
+
+
+@extend_schema_view(
+    get=extend_schema(
+        description="Board list management endpoint. Handles creating, updating, deleting, and moving lists inside a board.",
+        tags=["Board Lists"],
+        summary="List board lists",
+    ),
+    post=extend_schema(
+        description="Board list management endpoint. Handles creating, updating, deleting, and moving lists inside a board.",
+        tags=["Board Lists"],
+        summary="Create board list",
+    ),
+)
 class BoardListListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -712,7 +779,8 @@ class BoardListListCreateAPIView(APIView):
                 many=True
             )
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def get(
         self,
@@ -741,7 +809,8 @@ class BoardListListCreateAPIView(APIView):
         responses={
             status.HTTP_201_CREATED: BoardListReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def post(
         self,
@@ -788,6 +857,18 @@ class BoardListListCreateAPIView(APIView):
         )
 
 
+@extend_schema_view(
+    patch=extend_schema(
+        description="Board list management endpoint. Handles creating, updating, deleting, and moving lists inside a board.",
+        tags=["Board Lists"],
+        summary="Update board list",
+    ),
+    delete=extend_schema(
+        description="Board list management endpoint. Handles creating, updating, deleting, and moving lists inside a board.",
+        tags=["Board Lists"],
+        summary="Delete board list",
+    ),
+)
 class BoardListDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -818,7 +899,8 @@ class BoardListDetailAPIView(APIView):
         responses={
             status.HTTP_200_OK: BoardListReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def patch(
         self,
@@ -870,7 +952,8 @@ class BoardListDetailAPIView(APIView):
         responses={
             status.HTTP_204_NO_CONTENT: None
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def delete(
         self,
@@ -902,6 +985,13 @@ class BoardListDetailAPIView(APIView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        description="Board list management endpoint. Handles creating, updating, deleting, and moving lists inside a board.",
+        tags=["Board Lists"],
+        summary="Move board list",
+    ),
+)
 class BoardListMoveAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -910,7 +1000,8 @@ class BoardListMoveAPIView(APIView):
         responses={
             status.HTTP_200_OK: BoardListReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def post(
         self,
@@ -966,6 +1057,18 @@ class BoardListMoveAPIView(APIView):
             status=status.HTTP_200_OK,
         )
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Card management endpoint. Handles card creation, retrieval, update, deletion, and movement between lists.",
+        tags=["Cards"],
+        summary="List cards in board list",
+    ),
+    post=extend_schema(
+        description="Card management endpoint. Handles card creation, retrieval, update, deletion, and movement between lists.",
+        tags=["Cards"],
+        summary="Create card in board list",
+    ),
+)
 class CardListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -997,7 +1100,8 @@ class CardListCreateAPIView(APIView):
                 many=True
             )
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def get(
         self,
@@ -1039,7 +1143,8 @@ class CardListCreateAPIView(APIView):
         responses={
             status.HTTP_201_CREATED: CardReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def post(
         self,
@@ -1089,6 +1194,23 @@ class CardListCreateAPIView(APIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Card management endpoint. Handles card creation, retrieval, update, deletion, and movement between lists.",
+        tags=["Cards"],
+        summary="Get card details",
+    ),
+    patch=extend_schema(
+        description="Card management endpoint. Handles card creation, retrieval, update, deletion, and movement between lists.",
+        tags=["Cards"],
+        summary="Update card",
+    ),
+    delete=extend_schema(
+        description="Card management endpoint. Handles card creation, retrieval, update, deletion, and movement between lists.",
+        tags=["Cards"],
+        summary="Delete card",
+    ),
+)
 class CardDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1120,7 +1242,8 @@ class CardDetailAPIView(APIView):
         responses={
             status.HTTP_200_OK: CardReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def get(
         self,
@@ -1157,7 +1280,8 @@ class CardDetailAPIView(APIView):
         responses={
             status.HTTP_200_OK: CardReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def patch(
         self,
@@ -1209,7 +1333,8 @@ class CardDetailAPIView(APIView):
         responses={
             status.HTTP_204_NO_CONTENT: None
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def delete(
         self,
@@ -1241,6 +1366,13 @@ class CardDetailAPIView(APIView):
         )
 
 
+@extend_schema_view(
+    post=extend_schema(
+        description="Card management endpoint. Handles card creation, retrieval, update, deletion, and movement between lists.",
+        tags=["Cards"],
+        summary="Move card",
+    ),
+)
 class CardMoveAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1249,7 +1381,8 @@ class CardMoveAPIView(APIView):
         responses={
             status.HTTP_200_OK: CardReadSerializer
         },
-        tags=["boards"],
+        description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
+        tags=["Boards"],
     )
     def post(
         self,

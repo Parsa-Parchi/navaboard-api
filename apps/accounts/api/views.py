@@ -123,7 +123,9 @@ class OTPRequestAPIView(APIView):
             status.HTTP_201_CREATED: OTPRequestResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
 
     def post(self, request):
@@ -167,7 +169,9 @@ class OTPVerificationAPIView(APIView):
             status.HTTP_200_OK: OTPVerificationResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -211,7 +215,9 @@ class TokenRefreshAPIView(APIView):
             status.HTTP_200_OK: TokenRefreshResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         refresh_token = get_refresh_token_from_cookie(request)
@@ -239,7 +245,9 @@ class LogoutAPIView(APIView):
         responses={
             status.HTTP_200_OK: LogoutResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         refresh_token = get_refresh_token_from_cookie(request)
@@ -266,7 +274,9 @@ class CurrentUserProfileAPIView(APIView):
         responses={
             status.HTTP_200_OK: CurrentUserProfileSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def get(self, request):
         serializer = self.serializer_class(request.user)
@@ -278,7 +288,9 @@ class CurrentUserProfileAPIView(APIView):
         responses={
             status.HTTP_200_OK: CurrentUserProfileSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def patch(self, request):
         serializer = self.serializer_class(
@@ -296,7 +308,9 @@ class CurrentUserProfileAPIView(APIView):
         responses={
             status.HTTP_200_OK: CurrentUserProfileSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def put(self, request):
         serializer = self.serializer_class(
@@ -319,7 +333,9 @@ class EmailPasswordLoginAPIView(APIView):
             status.HTTP_200_OK: OTPVerificationResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -368,7 +384,9 @@ class EmailSignupRequestAPIView(APIView):
             status.HTTP_201_CREATED: EmailSignupRequestResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -416,7 +434,9 @@ class EmailSignupConfirmAPIView(APIView):
             status.HTTP_200_OK: EmailSignupConfirmResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -459,7 +479,9 @@ class SetInitialPasswordAPIView(APIView):
             status.HTTP_200_OK: LogoutResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -496,7 +518,9 @@ class ChangePasswordAPIView(APIView):
             status.HTTP_200_OK: LogoutResponseSerializer,
             status.HTTP_429_TOO_MANY_REQUESTS: ThrottledResponseSerializer,
         },
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
     )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -529,7 +553,9 @@ class PasswordResetRequestAPIView(APIView):
     throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
 
     @extend_schema(
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
         request=PasswordResetRequestSerializer,
         responses={
             status.HTTP_201_CREATED: PasswordResetRequestResponseSerializer,
@@ -572,7 +598,9 @@ class PasswordResetConfirmAPIView(APIView):
     throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
 
     @extend_schema(
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
         request=PasswordResetConfirmSerializer,
         responses={
             status.HTTP_200_OK: PasswordResetConfirmResponseSerializer,
@@ -612,7 +640,9 @@ class EmailVerificationRequestAPIView(APIView):
     ]
 
     @extend_schema(
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
         request=EmailVerificationRequestSerializer,
         responses={
             status.HTTP_201_CREATED: EmailVerificationRequestResponseSerializer,
@@ -658,7 +688,9 @@ class EmailVerificationConfirmAPIView(APIView):
     ]
 
     @extend_schema(
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
         request=EmailVerificationConfirmSerializer,
         responses={
             status.HTTP_200_OK: EmailVerificationConfirmResponseSerializer,
@@ -691,7 +723,9 @@ class PhoneChangeRequestAPIView(APIView):
     throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
 
     @extend_schema(
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
         request=PhoneChangeRequestSerializer,
         responses={
             status.HTTP_201_CREATED: PhoneChangeRequestResponseSerializer,
@@ -734,7 +768,9 @@ class PhoneChangeConfirmAPIView(APIView):
     throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
 
     @extend_schema(
-        tags=["auth"],
+        summary="Authentication API operation",
+        description="Authentication endpoint. See request schema and response schema for required fields and returned data.",
+        tags=["Authentication"],
         request=PhoneChangeConfirmSerializer,
         responses={
             status.HTTP_200_OK: PhoneChangeConfirmResponseSerializer,

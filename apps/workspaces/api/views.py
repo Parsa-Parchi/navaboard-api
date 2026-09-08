@@ -84,7 +84,9 @@ class WorkspaceListCreateAPIView(APIView):
 
     @extend_schema(
         responses={status.HTTP_200_OK: WorkspaceReadSerializer(many=True)},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def get(self, request):
         workspaces = _workspace_queryset_for_user(request.user)
@@ -98,7 +100,9 @@ class WorkspaceListCreateAPIView(APIView):
     @extend_schema(
         request=WorkspaceWriteSerializer,
         responses={status.HTTP_201_CREATED: WorkspaceReadSerializer},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def post(self, request):
         serializer = WorkspaceWriteSerializer(data=request.data)
@@ -133,7 +137,9 @@ class WorkspaceDetailAPIView(APIView):
 
     @extend_schema(
         responses={status.HTTP_200_OK: WorkspaceReadSerializer},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def get(self, request, workspace_id):
         workspace = self.get_object(request, workspace_id)
@@ -146,7 +152,9 @@ class WorkspaceDetailAPIView(APIView):
     @extend_schema(
         request=WorkspaceWriteSerializer,
         responses={status.HTTP_200_OK: WorkspaceReadSerializer},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def patch(self, request, workspace_id):
         workspace = self.get_object(request, workspace_id)
@@ -182,7 +190,9 @@ class WorkspaceMembershipListCreateAPIView(APIView):
 
     @extend_schema(
         responses={status.HTTP_200_OK: WorkspaceMembershipReadSerializer(many=True)},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def get(self, request, workspace_id):
         workspace = self.get_workspace(request, workspace_id)
@@ -193,7 +203,9 @@ class WorkspaceMembershipListCreateAPIView(APIView):
     @extend_schema(
         request=WorkspaceMemberCreateSerializer,
         responses={status.HTTP_201_CREATED: WorkspaceMembershipReadSerializer},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def post(self, request, workspace_id):
         workspace = self.get_workspace(request, workspace_id)
@@ -249,7 +261,9 @@ class WorkspaceMembershipDetailAPIView(APIView):
     @extend_schema(
         request=WorkspaceMemberRoleUpdateSerializer,
         responses={status.HTTP_200_OK: WorkspaceMembershipReadSerializer},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def patch(self, request, workspace_id, membership_id):
         workspace, membership = self.get_objects(
@@ -278,7 +292,9 @@ class WorkspaceMembershipDetailAPIView(APIView):
 
     @extend_schema(
         responses={status.HTTP_204_NO_CONTENT: None},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def delete(self, request, workspace_id, membership_id):
         workspace, membership = self.get_objects(
@@ -313,7 +329,9 @@ class WorkspaceOwnershipTransferAPIView(APIView):
     @extend_schema(
         request=WorkspaceOwnershipTransferSerializer,
         responses={status.HTTP_200_OK: WorkspaceMembershipReadSerializer},
-        tags=["workspaces"],
+        summary="Workspace API operation",
+        description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
+        tags=["Workspaces"],
     )
     def post(self, request, workspace_id):
         workspace = _get_visible_workspace(

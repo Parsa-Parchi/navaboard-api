@@ -527,6 +527,7 @@ paths:
   /api/boards/{board_id}/:
     get:
       operationId: boards_retrieve
+      summary: Get board details
       parameters:
       - in: path
         name: board_id
@@ -535,7 +536,7 @@ paths:
           format: uuid
         required: true
       tags:
-      - boards
+      - Boards
       security:
       - jwtAuth: []
       responses:
@@ -547,6 +548,7 @@ paths:
           description: ''
     patch:
       operationId: boards_partial_update
+      summary: Update board
       parameters:
       - in: path
         name: board_id
@@ -555,7 +557,7 @@ paths:
           format: uuid
         required: true
       tags:
-      - boards
+      - Boards
       requestBody:
         content:
           application/json:
@@ -578,6 +580,7 @@ paths:
           description: ''
     delete:
       operationId: boards_destroy
+      summary: Delete board
       parameters:
       - in: path
         name: board_id
@@ -586,7 +589,7 @@ paths:
           format: uuid
         required: true
       tags:
-      - boards
+      - Boards
       security:
       - jwtAuth: []
       responses:
@@ -717,6 +720,121 @@ paths:
               schema:
                 $ref: '#/components/schemas/CardRead'
           description: ''
+  /api/boards/{board_id}/labels/:
+    get:
+      operationId: boards_labels_list
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelRead'
+          description: ''
+    post:
+      operationId: boards_labels_create
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LabelCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LabelCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelRead'
+          description: ''
+  /api/boards/{board_id}/labels/{label_id}/:
+    patch:
+      operationId: boards_labels_partial_update
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: label_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLabelUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLabelUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLabelUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelRead'
+          description: ''
+    delete:
+      operationId: boards_labels_destroy
+      parameters:
+      - in: path
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: label_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/boards/{board_id}/lists/:
     get:
       operationId: boards_lists_list
@@ -1053,6 +1171,493 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/cards/{card_id}/checklists/:
+    get:
+      operationId: cards_checklists_list
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChecklistRead'
+          description: ''
+    post:
+      operationId: cards_checklists_create
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChecklistCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChecklistCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChecklistCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistRead'
+          description: ''
+  /api/cards/{card_id}/comments/:
+    get:
+      operationId: cards_comments_list
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommentRead'
+          description: ''
+    post:
+      operationId: cards_comments_create
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentRead'
+          description: ''
+  /api/cards/{card_id}/labels/:
+    post:
+      operationId: cards_labels_create
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardLabelCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CardLabelCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CardLabelCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardLabelRead'
+          description: ''
+  /api/cards/{card_id}/labels/{label_id}/:
+    delete:
+      operationId: cards_labels_destroy
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: label_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/cards/{card_id}/members/:
+    get:
+      operationId: cards_members_list
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CardAssigneeRead'
+          description: ''
+    post:
+      operationId: cards_members_create
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardAssigneeCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CardAssigneeCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CardAssigneeCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardAssigneeRead'
+          description: ''
+  /api/cards/{card_id}/members/{assignee_id}/:
+    delete:
+      operationId: cards_members_destroy
+      parameters:
+      - in: path
+        name: assignee_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/checklist-items/{item_id}/:
+    patch:
+      operationId: checklist_items_partial_update
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedChecklistItemUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedChecklistItemUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedChecklistItemUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistItemRead'
+          description: ''
+    delete:
+      operationId: checklist_items_destroy
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/checklist-items/{item_id}/move/:
+    post:
+      operationId: checklist_items_move_create
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Position'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Position'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Position'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistItemRead'
+          description: ''
+  /api/checklists/{checklist_id}/:
+    patch:
+      operationId: checklists_partial_update
+      parameters:
+      - in: path
+        name: checklist_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedChecklistUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedChecklistUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedChecklistUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistRead'
+          description: ''
+    delete:
+      operationId: checklists_destroy
+      parameters:
+      - in: path
+        name: checklist_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/checklists/{checklist_id}/items/:
+    post:
+      operationId: checklists_items_create
+      parameters:
+      - in: path
+        name: checklist_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChecklistItemCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChecklistItemCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChecklistItemCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistItemRead'
+          description: ''
+  /api/checklists/{checklist_id}/move/:
+    post:
+      operationId: checklists_move_create
+      parameters:
+      - in: path
+        name: checklist_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Position'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Position'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Position'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChecklistRead'
+          description: ''
+  /api/comments/{comment_id}/:
+    patch:
+      operationId: comments_partial_update
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentRead'
+          description: ''
+    delete:
+      operationId: comments_destroy
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/workspaces/:
     get:
       operationId: workspaces_list
@@ -1149,6 +1754,7 @@ paths:
   /api/workspaces/{workspace_id}/boards/:
     get:
       operationId: workspaces_boards_list
+      summary: List and create boards
       parameters:
       - in: path
         name: workspace_id
@@ -1171,6 +1777,7 @@ paths:
           description: ''
     post:
       operationId: workspaces_boards_create
+      summary: List and create boards
       parameters:
       - in: path
         name: workspace_id
@@ -1517,15 +2124,14 @@ components:
     BoardMemberCreate:
       type: object
       properties:
-        user_id:
+        phone_number:
           type: string
-          format: uuid
         role:
           allOf:
           - $ref: '#/components/schemas/WorkspaceAssignableRole'
           default: member
       required:
-      - user_id
+      - phone_number
     BoardMemberUser:
       type: object
       properties:
@@ -1640,6 +2246,60 @@ components:
           $ref: '#/components/schemas/BoardVisibility'
       required:
       - name
+    CardAssigneeCreate:
+      type: object
+      properties:
+        phone_number:
+          type: string
+      required:
+      - phone_number
+    CardAssigneeRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        card_id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_membership_id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/CardAssigneeUser'
+          readOnly: true
+        assigned_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_at
+      - assigned_by
+      - card_id
+      - id
+      - user
+      - workspace_membership_id
+    CardAssigneeUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 150
+      required:
+      - id
     CardCreate:
       type: object
       properties:
@@ -1658,6 +2318,33 @@ components:
           minimum: 0
       required:
       - title
+    CardLabelCreate:
+      type: object
+      properties:
+        label_id:
+          type: string
+          format: uuid
+      required:
+      - label_id
+    CardLabelRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        card_id:
+          type: string
+          format: uuid
+          readOnly: true
+        label:
+          allOf:
+          - $ref: '#/components/schemas/LabelRead'
+          readOnly: true
+      required:
+      - card_id
+      - id
+      - label
     CardMove:
       type: object
       properties:
@@ -1727,6 +2414,147 @@ components:
       required:
       - current_password
       - new_password
+    ChecklistCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+      required:
+      - title
+    ChecklistItemCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+      required:
+      - title
+    ChecklistItemRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        checklist_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        is_completed:
+          type: boolean
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - checklist_id
+      - created_at
+      - id
+      - position
+      - title
+      - updated_at
+    ChecklistRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        card_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 120
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistItemRead'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - card_id
+      - created_at
+      - id
+      - items
+      - position
+      - title
+      - updated_at
+    CommentAuthor:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          maxLength: 150
+      required:
+      - id
+    CommentCreate:
+      type: object
+      properties:
+        body:
+          type: string
+      required:
+      - body
+    CommentRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        card_id:
+          type: string
+          format: uuid
+          readOnly: true
+        author:
+          allOf:
+          - $ref: '#/components/schemas/CommentAuthor'
+          readOnly: true
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - body
+      - card_id
+      - created_at
+      - id
+      - updated_at
     CurrentUserProfile:
       type: object
       properties:
@@ -1883,6 +2711,50 @@ components:
       required:
       - detail
       - expires_at
+    LabelCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        color:
+          type: string
+          maxLength: 32
+      required:
+      - color
+      - name
+    LabelRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        color:
+          type: string
+          maxLength: 32
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - board_id
+      - color
+      - created_at
+      - id
+      - name
+      - updated_at
     LogoutResponse:
       type: object
       properties:
@@ -2020,6 +2892,25 @@ components:
           type: string
           format: date-time
           nullable: true
+    PatchedChecklistItemUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        is_completed:
+          type: boolean
+    PatchedChecklistUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+    PatchedCommentUpdate:
+      type: object
+      properties:
+        body:
+          type: string
     PatchedCurrentUserProfile:
       type: object
       properties:
@@ -2053,6 +2944,15 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedLabelUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        color:
+          type: string
+          maxLength: 32
     PatchedWorkspaceMemberRoleUpdate:
       type: object
       properties:
@@ -2113,6 +3013,14 @@ components:
       required:
       - detail
       - expires_at
+    Position:
+      type: object
+      properties:
+        position:
+          type: integer
+          minimum: 0
+      required:
+      - position
     SetInitialPassword:
       type: object
       properties:
@@ -2149,15 +3057,14 @@ components:
     WorkspaceMemberCreate:
       type: object
       properties:
-        user_id:
+        phone_number:
           type: string
-          format: uuid
         role:
           allOf:
           - $ref: '#/components/schemas/WorkspaceAssignableRole'
           default: member
       required:
-      - user_id
+      - phone_number
     WorkspaceMemberUser:
       type: object
       properties:
@@ -2199,11 +3106,10 @@ components:
     WorkspaceOwnershipTransfer:
       type: object
       properties:
-        new_owner_user_id:
+        new_owner_phone_number:
           type: string
-          format: uuid
       required:
-      - new_owner_user_id
+      - new_owner_phone_number
     WorkspaceRead:
       type: object
       properties:
@@ -2265,3 +3171,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+tags:
+- name: Authentication
+- name: Workspaces
+- name: Boards
+- name: Board Lists
+- name: Cards
+- name: Collaboration
