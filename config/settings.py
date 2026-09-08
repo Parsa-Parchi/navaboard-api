@@ -166,6 +166,15 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API documentation for the NavaBoard project.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "SORT_OPERATIONS": False,
+    "TAGS": [
+        {"name": "Authentication"},
+        {"name": "Workspaces"},
+        {"name": "Boards"},
+        {"name": "Board Lists"},
+        {"name": "Cards"},
+        {"name": "Collaboration"},
+    ],
     "ENUM_NAME_OVERRIDES": {
     "WorkspaceRole": "apps.workspaces.models.WorkspaceMembership.Role",
     "WorkspaceAssignableRole": ["admin", "member"],
