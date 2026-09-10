@@ -36,6 +36,17 @@ class UploadSerializer(serializers.Serializer):
 class AttachmentList(ActivityMutationMixin, APIView):
     parser_classes = [MultiPartParser, FormParser]
 
+    def dispatch(self, request, *args, **kwargs):
+        self.stored_upload = None
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except Exception:
+            # The domain transaction also includes activity/notification writes.
+            # Clean up storage if any later write or the transaction commit fails.
+            if self.stored_upload is not None:
+                self.stored_upload.delete(save=False)
+            raise
+
     @extend_schema(tags=["Attachments"], summary="List private card attachments", description="Board readers may list metadata. Download each file through its authenticated content endpoint.", responses=AttachmentSerializer(many=True))
     def get(self, request, card_id):
         card = _get_visible_card(user=request.user, card_id=card_id)
@@ -52,11 +63,8 @@ class AttachmentList(ActivityMutationMixin, APIView):
         item = Attachment(card=card, uploaded_by=request.user, original_name=uploaded.name[:255], size=uploaded.size)
         # Random storage names do not retain user-controlled extensions or paths.
         item.file.save(uuid.uuid4().hex, uploaded, save=False)
-        try:
-            item.save()
-        except Exception:
-            item.file.delete(save=False)
-            raise
+        self.stored_upload = item.file
+        item.save()
         return Response(AttachmentSerializer(item).data, status=201)
 
 
