@@ -402,7 +402,7 @@ class CollaborationModelTests(TestCase):
                     position=0,
                 )
 
-    def test_deleting_card_cascades_collaboration_data(
+    def test_hard_deleting_card_cascades_collaboration_data(
         self,
     ):
         CardAssignee.objects.create(
@@ -442,7 +442,7 @@ class CollaborationModelTests(TestCase):
             position=0,
         )
 
-        self.card.delete()
+        self.card.hard_delete()
 
         self.assertEqual(
             CardAssignee.objects.count(),

@@ -7,6 +7,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.activity.mixins import ActivityMutationMixin
 
 from apps.boards.api.permissions import (
     CanEditBoard,
@@ -102,6 +103,7 @@ def _board_queryset_for_user(user):
                 workspace__memberships__user=user,
             )
         )
+        .filter(workspace__deleted_at__isnull=True)
         .select_related(
             "workspace",
             "created_by",
@@ -227,7 +229,7 @@ def _get_board_workspace_membership(
         summary="Create board in workspace",
     ),
 )
-class BoardListCreateAPIView(APIView):
+class BoardListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -334,7 +336,7 @@ class BoardListCreateAPIView(APIView):
         summary="Delete board",
     ),
 )
-class BoardDetailAPIView(APIView):
+class BoardDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(
@@ -483,7 +485,7 @@ class BoardDetailAPIView(APIView):
         return Response(
             status=status.HTTP_204_NO_CONTENT,
         )
-class BoardMembershipListCreateAPIView(APIView):
+class BoardMembershipListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_board(
@@ -606,7 +608,7 @@ class BoardMembershipListCreateAPIView(APIView):
         )
 
 
-class BoardMembershipDetailAPIView(APIView):
+class BoardMembershipDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_objects(
@@ -749,7 +751,7 @@ class BoardMembershipDetailAPIView(APIView):
         summary="Create board list",
     ),
 )
-class BoardListListCreateAPIView(APIView):
+class BoardListListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_board(
@@ -869,7 +871,7 @@ class BoardListListCreateAPIView(APIView):
         summary="Delete board list",
     ),
 )
-class BoardListDetailAPIView(APIView):
+class BoardListDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_objects(
@@ -992,7 +994,7 @@ class BoardListDetailAPIView(APIView):
         summary="Move board list",
     ),
 )
-class BoardListMoveAPIView(APIView):
+class BoardListMoveAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -1069,7 +1071,7 @@ class BoardListMoveAPIView(APIView):
         summary="Create card in board list",
     ),
 )
-class CardListCreateAPIView(APIView):
+class CardListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_objects(
@@ -1211,7 +1213,7 @@ class CardListCreateAPIView(APIView):
         summary="Delete card",
     ),
 )
-class CardDetailAPIView(APIView):
+class CardDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_objects(
@@ -1234,6 +1236,7 @@ class CardDetailAPIView(APIView):
             ),
             pk=card_id,
             board_list__board=board,
+            board_list__deleted_at__isnull=True,
         )
 
         return board, card
@@ -1373,7 +1376,7 @@ class CardDetailAPIView(APIView):
         summary="Move card",
     ),
 )
-class CardMoveAPIView(APIView):
+class CardMoveAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -1403,6 +1406,7 @@ class CardMoveAPIView(APIView):
             ),
             pk=card_id,
             board_list__board=board,
+            board_list__deleted_at__isnull=True,
         )
 
         if not CanEditBoard().has_object_permission(

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.token_blacklist.models import (
@@ -28,11 +29,20 @@ def issue_auth_token_pair(user: Any) -> AuthTokenPair:
     )
 
 
+@transaction.atomic
 def refresh_auth_token_pair(refresh_token: str) -> AuthTokenPair:
     normalized_refresh_token = refresh_token.strip()
 
     if not normalized_refresh_token:
         raise ValidationError("Refresh token is required.")
+
+    try:
+        parsed = RefreshToken(normalized_refresh_token)
+        # Serialize rotation for this session. Serializer revalidates the blacklist
+        # after the lock, so two requests cannot rotate the same token successfully.
+        OutstandingToken.objects.select_for_update().get(jti=parsed["jti"])
+    except (TokenError, OutstandingToken.DoesNotExist) as exc:
+        raise ValidationError("Refresh token is invalid or expired.") from exc
 
     serializer = TokenRefreshSerializer(
         data={

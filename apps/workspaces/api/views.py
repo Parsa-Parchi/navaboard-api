@@ -8,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.activity.mixins import ActivityMutationMixin
 
 from apps.workspaces.api.permissions import (
     IsWorkspaceAdmin,
@@ -79,7 +80,7 @@ def _get_active_user(*, phone_number):
             }
         ) from exc
 
-class WorkspaceListCreateAPIView(APIView):
+class WorkspaceListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -123,8 +124,16 @@ class WorkspaceListCreateAPIView(APIView):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
-class WorkspaceDetailAPIView(APIView):
+class WorkspaceDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Workspaces"], summary="Delete workspace", responses={204: None})
+    def delete(self, request, workspace_id):
+        workspace = self.get_object(request, workspace_id)
+        if not IsWorkspaceOwner().has_object_permission(request, self, workspace):
+            raise PermissionDenied(IsWorkspaceOwner.message)
+        workspace.delete()
+        return Response(status=204)
 
     def get_object(self, request, workspace_id) -> Workspace:
         workspace = _get_visible_workspace(
@@ -176,7 +185,7 @@ class WorkspaceDetailAPIView(APIView):
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
-class WorkspaceMembershipListCreateAPIView(APIView):
+class WorkspaceMembershipListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_workspace(self, request, workspace_id) -> Workspace:
@@ -244,7 +253,7 @@ class WorkspaceMembershipListCreateAPIView(APIView):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
-class WorkspaceMembershipDetailAPIView(APIView):
+class WorkspaceMembershipDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_objects(self, request, workspace_id, membership_id):
@@ -323,7 +332,7 @@ class WorkspaceMembershipDetailAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class WorkspaceOwnershipTransferAPIView(APIView):
+class WorkspaceOwnershipTransferAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -363,4 +372,3 @@ class WorkspaceOwnershipTransferAPIView(APIView):
         )
         response_serializer = WorkspaceMembershipReadSerializer(membership)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-

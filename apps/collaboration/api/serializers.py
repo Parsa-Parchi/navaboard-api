@@ -1,3 +1,4 @@
+from apps.core.fields import IranianPhoneField
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -56,7 +57,7 @@ class CardAssigneeReadSerializer(serializers.ModelSerializer):
 
 
 class CardAssigneeCreateSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
+    phone_number = IranianPhoneField()
 
 class CommentAuthorSerializer(serializers.ModelSerializer):
     class Meta:

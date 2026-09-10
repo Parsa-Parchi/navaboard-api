@@ -723,6 +723,7 @@ class EmailPasswordLoginAPIViewTests(APITestCase):
         self.assertIn("Retry-After", responses[-1])
 
 
+@override_settings(AUTH_ENABLE_EMAIL_SIGNUP=True)
 class EmailSignupAPIViewTests(APITestCase):
     def setUp(self):
         super().setUp()
