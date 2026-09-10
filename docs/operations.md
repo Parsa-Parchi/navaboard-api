@@ -52,4 +52,4 @@ product's upload policy. Do not blindly purge retained objects needed for recove
 - New feeds/search use pagination; existing collections retain arrays.
 - Refresh ignores stale Bearer headers and serializes rotation per session.
 
-See `frontend-fa.md` for request sequences and examples.
+See [Frontend integration guide](frontend-integration.md) for request sequences and examples.

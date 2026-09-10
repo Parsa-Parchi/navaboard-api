@@ -4249,12 +4249,84 @@ paths:
                     type: string
       summary: Delete board label
   /api/cards/{card_id}/labels/:
+    get:
+      operationId: cards_labels_list
+      description: |-
+        Board readers may list; board member/workspace owner required to attach.
+
+        GET returns active associations with nested label metadata. POST label_id belonging to the same board.
+
+        Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
+      summary: Get card labels
+      parameters:
+      - in: path
+        name: card_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Collaboration
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CardLabelRead'
+          description: ''
+        '400':
+          description: Invalid input; field errors or a list of validation messages.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    type: string
+                - type: object
+                  additionalProperties:
+                    oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+        '403':
+          description: Insufficient permission or invalid CSRF.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '401':
+          description: Missing or invalid access token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '404':
+          description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     post:
       operationId: cards_labels_create
       description: |-
-        Board member/workspace owner required.
+        Board readers may list; board member/workspace owner required to attach.
 
-        Send label_id belonging to the same board.
+        GET returns active associations with nested label metadata. POST label_id belonging to the same board.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       parameters:
@@ -4336,7 +4408,7 @@ paths:
                 properties:
                   detail:
                     type: string
-      summary: Create card label
+      summary: Create card labels
   /api/cards/{card_id}/labels/{label_id}/:
     delete:
       operationId: cards_labels_destroy

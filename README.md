@@ -32,7 +32,7 @@ SMS/email console backends support local development without activating provider
 - Swagger: `/api/docs/`
 - OpenAPI: `/api/schema/` (exported copy: `schema.yml`)
 - Database readiness: `/health/`
-- [راهنمای فارسی فرانت](docs/frontend-fa.md)
+- [Frontend integration guide](docs/frontend-integration.md)
 - [Operations and deployment](docs/operations.md)
 
 ## Verification
