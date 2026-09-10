@@ -1,4 +1,6 @@
 import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -45,3 +47,10 @@ class AttachmentTests(APITestCase):
         response = self.client.post(self.url, {"file": SimpleUploadedFile("large.txt", b"a" * 17)}, format="multipart")
         self.assertEqual(response.status_code, 400)
         self.assertFalse(self.card.attachments.exists())
+
+    def test_activity_failure_rolls_back_record_and_uploaded_file(self):
+        with patch("apps.activity.services.Activity.objects.create", side_effect=RuntimeError("Activity unavailable")):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.url, {"file": SimpleUploadedFile("test.txt", b"hello")}, format="multipart")
+        self.assertFalse(self.card.attachments.exists())
+        self.assertFalse(any(path.is_file() for path in Path(self.media.name).rglob("*")))
