@@ -1,89 +1,74 @@
 # NavaBoard API
 
-A production-minded Django REST API for NavaBoard, an Iranian task management platform inspired by Kanban workflows.
+Django REST backend for a Trello-style Kanban application. Python 3.13,
+Django 5.2, PostgreSQL, DRF, SimpleJWT and drf-spectacular.
 
-> NavaBoard is being built as an API-first backend. The frontend will communicate with the system through documented REST APIs.
+## Features
 
-## Project Status
+- Phone OTP registration/login; optional verified email/password added afterward.
+- Access tokens in JSON; rotating refresh tokens in HttpOnly cookies; CSRF protection.
+- Workspaces, ownership transfer, roles and owner-only workspace deletion.
+- Private/workspace-visible boards, board membership, ordered lists/cards and deadlines.
+- Labels, checklists/items, comments, assignees and private file attachments.
+- Paginated card search, activity history and persistent in-app notifications.
+- Current permissions and soft-deleted parents checked when reading data and notifications.
+- Swagger with endpoint-specific permissions, schemas and authentication examples.
 
-🚧 Under active development.
+## Local development (PowerShell)
 
-The first implementation milestone is a secure authentication system with Iranian phone-number OTP login, email/password login, JWT-based sessions, and refresh-token rotation.
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements/base.txt
+Copy-Item .env.example .env
+# Configure PostgreSQL DATABASE_URL and a unique DJANGO_SECRET_KEY in .env.
+.venv\Scripts\python.exe manage.py migrate
+.venv\Scripts\python.exe manage.py runserver
+```
 
-## Core Product Goals
+Keep an existing `.env` without overwriting it. PostgreSQL must already be running.
+The database role needs permission to create a test database for tests.
+SMS/email console backends support local development without activating providers.
 
-- Fast phone-based login using Iranian mobile numbers and SMS OTP
-- Automatic account creation after successful first-time OTP verification
-- Optional email and password authentication
-- Workspace-based collaboration and access control
-- Private and workspace-visible boards
-- Lists, cards, drag-and-drop ordering, comments, labels, checklists, and attachments
-- Production-minded security, documentation, testing, and deployment practices
+- Swagger: `/api/docs/`
+- OpenAPI: `/api/schema/` (exported copy: `schema.yml`)
+- Database readiness: `/health/`
+- [راهنمای فارسی فرانت](docs/frontend-fa.md)
+- [Operations and deployment](docs/operations.md)
 
-## Planned Technology Stack
+## Verification
 
-| Area | Technology |
-| --- | --- |
-| Backend | Django, Django REST Framework |
-| Database | PostgreSQL |
-| Cache and rate limiting | Redis |
-| Background tasks | Celery |
-| Authentication | JWT access tokens and refresh-token rotation |
-| OTP delivery | Iranian SMS provider |
-| File storage | S3-compatible object storage |
-| API documentation | OpenAPI / Swagger |
-| Testing | Pytest and Django test tools |
-| Local development | Docker and Docker Compose |
-| CI | GitHub Actions |
+```powershell
+.venv\Scripts\python.exe manage.py test --noinput
+.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+.venv\Scripts\python.exe manage.py spectacular --file schema.yml --validate --fail-on-warn
+.venv\Scripts\python.exe manage.py check
+```
 
-## Authentication Design
+CI runs checks against PostgreSQL. New feeds/search have pagination envelopes;
+existing board/workspace/collaboration collections retain array responses.
 
-NavaBoard supports two login methods:
+## Authentication contract
 
-1. **Phone OTP login**
-   - Iranian phone numbers are normalized to E.164 format.
-   - A six-digit OTP is sent by SMS.
-   - A new account is automatically created after successful verification when the phone number does not already exist.
+Only phone OTP creates accounts by default. Legacy email-only signup routes return
+410 and are hidden from Swagger. Leave `AUTH_ENABLE_EMAIL_SIGNUP=False`.
 
-2. **Email and password login**
-   - Users may add a verified email address and password later from profile settings.
-   - Each email address and phone number belongs to exactly one account.
+Refresh is sent through `Set-Cookie`, never JSON. The frontend includes credentials,
+keeps access in memory and sends `Authorization: Bearer <access>`. Initialize
+`/api/auth/csrf/` and send `X-CSRFToken` on login, refresh and logout. JavaScript
+does not read or create the HttpOnly refresh cookie. See the frontend guide.
 
-## Security Principles
+## Scope
 
-- OTP values are hashed before storage.
-- OTPs expire after two minutes.
-- OTP verification attempts are limited.
-- OTP requests are rate-limited by phone number and IP address.
-- Access tokens are short-lived.
-- Refresh tokens are stored in HttpOnly Secure cookies and can be revoked.
-- Sensitive configuration is stored in environment variables and never committed to Git.
-- Production traffic must use HTTPS.
+Notifications are an in-app polling inbox, not WebSocket, mobile push or scheduled
+deadline reminders. History records successful domain API mutations from installation
+onward; direct ORM/admin edits and authentication operations are not included.
+Attachments use private server storage and authenticated downloads; deleted blobs
+are retained for an operator-defined retention/backup policy.
 
-## Roadmap
-
-- [x] Product analysis and architecture design
-- [x] Database and domain modeling
-- [x] Authentication flow design
-- [ ] Repository and documentation foundation
-- [ ] Django project infrastructure
-- [ ] Authentication and OTP module
-- [ ] Workspace and permission module
-- [ ] Board, list, and card module
-- [ ] Card collaboration features
-- [ ] Automated tests, Swagger, CI, and deployment
-
-## Documentation
-
-Architecture diagrams, security decisions, database models, and implementation planning will be maintained under the `docs/` directory.
-
-## Development Workflow
-
-- Feature branches are created from `main`.
-- Each change is committed using Conventional Commits.
-- Changes are reviewed through pull requests before merging into `main`.
-- Secrets, API keys, `.env` files, and local databases must never be committed.
+Production still needs environment configuration, HTTPS, a shared cache, backups
+and actual SMS/email credentials. No infrastructure is deployed by this repository.
+Never serve `private-media/` publicly.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT; see `LICENSE`.
