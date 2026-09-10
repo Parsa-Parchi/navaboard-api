@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.accounts.api.views import (
+    CSRFTokenAPIView,
     PhoneChangeConfirmAPIView,
     PhoneChangeRequestAPIView,
     PasswordResetConfirmAPIView,
@@ -21,6 +22,7 @@ from apps.accounts.api.views import (
 app_name = "accounts-api"
 
 urlpatterns = [
+    path("auth/csrf/", CSRFTokenAPIView.as_view(), name="csrf"),
     path(
         "auth/otp/request/",
         OTPRequestAPIView.as_view(),

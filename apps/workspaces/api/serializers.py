@@ -1,3 +1,4 @@
+from apps.core.fields import IranianPhoneField
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -79,7 +80,7 @@ class WorkspaceMembershipReadSerializer(serializers.ModelSerializer):
 
 
 class WorkspaceMemberCreateSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
+    phone_number = IranianPhoneField()
     role = serializers.ChoiceField(
         choices=(
             WorkspaceMembership.Role.ADMIN,
@@ -99,5 +100,5 @@ class WorkspaceMemberRoleUpdateSerializer(serializers.Serializer):
 
 
 class WorkspaceOwnershipTransferSerializer(serializers.Serializer):
-    new_owner_phone_number = serializers.CharField()
+    new_owner_phone_number = IranianPhoneField()
 

@@ -8,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from apps.activity.mixins import ActivityMutationMixin
 
 from apps.boards.api.permissions import (
     CanEditBoard,
@@ -107,6 +108,11 @@ def _card_queryset_for_user(user):
                 board_list__board__workspace__memberships__user=user,
             )
         )
+        .filter(
+            board_list__deleted_at__isnull=True,
+            board_list__board__deleted_at__isnull=True,
+            board_list__board__workspace__deleted_at__isnull=True,
+        )
         .select_related(
             "board_list",
             "board_list__board",
@@ -144,6 +150,7 @@ def _board_queryset_for_user(user):
                 workspace__memberships__user=user,
             )
         )
+        .filter(workspace__deleted_at__isnull=True)
         .select_related(
             "workspace",
         )
@@ -226,6 +233,7 @@ def _get_visible_checklist_item(
             "checklist__card__board_list__board",
         ),
         pk=item_id,
+        checklist__deleted_at__isnull=True,
     )
 
     _get_visible_card(
@@ -236,7 +244,7 @@ def _get_visible_checklist_item(
     return item
 
 
-class BoardLabelListCreateAPIView(APIView):
+class BoardLabelListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_board(
@@ -346,7 +354,7 @@ class BoardLabelListCreateAPIView(APIView):
         )
 
 
-class BoardLabelDetailAPIView(APIView):
+class BoardLabelDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_board_and_label(
@@ -460,7 +468,7 @@ class BoardLabelDetailAPIView(APIView):
         )
 
 
-class CardLabelCreateAPIView(APIView):
+class CardLabelCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -541,7 +549,7 @@ class CardLabelCreateAPIView(APIView):
         )
 
 
-class CardLabelDetailAPIView(APIView):
+class CardLabelDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -593,7 +601,7 @@ class CardLabelDetailAPIView(APIView):
         )
 
 
-class ChecklistListCreateAPIView(APIView):
+class ChecklistListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -696,7 +704,7 @@ class ChecklistListCreateAPIView(APIView):
         )
 
 
-class ChecklistDetailAPIView(APIView):
+class ChecklistDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -789,7 +797,7 @@ class ChecklistDetailAPIView(APIView):
         )
 
 
-class ChecklistMoveAPIView(APIView):
+class ChecklistMoveAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -848,7 +856,7 @@ class ChecklistMoveAPIView(APIView):
         )
 
 
-class ChecklistItemCreateAPIView(APIView):
+class ChecklistItemCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -907,7 +915,7 @@ class ChecklistItemCreateAPIView(APIView):
         )
 
 
-class ChecklistItemDetailAPIView(APIView):
+class ChecklistItemDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -1000,7 +1008,7 @@ class ChecklistItemDetailAPIView(APIView):
         )
 
 
-class ChecklistItemMoveAPIView(APIView):
+class ChecklistItemMoveAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -1062,7 +1070,7 @@ class ChecklistItemMoveAPIView(APIView):
 
 
 
-class CommentListCreateAPIView(APIView):
+class CommentListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_card(
@@ -1180,7 +1188,7 @@ class CommentListCreateAPIView(APIView):
         )
 
 
-class CommentDetailAPIView(APIView):
+class CommentDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_comment(
@@ -1309,7 +1317,7 @@ class CommentDetailAPIView(APIView):
         )
 
 
-class CardAssigneeListCreateAPIView(APIView):
+class CardAssigneeListCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get_card(
@@ -1441,7 +1449,7 @@ class CardAssigneeListCreateAPIView(APIView):
         )
 
 
-class CardAssigneeDetailAPIView(APIView):
+class CardAssigneeDetailAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(

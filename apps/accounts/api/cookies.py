@@ -10,6 +10,7 @@ def get_refresh_token_from_cookie(request: Request) -> str | None:
 
 
 def set_refresh_token_cookie(response: Response, refresh_token: str) -> None:
+    response["Cache-Control"] = "no-store"
     response.set_cookie(
         key=settings.AUTH_REFRESH_COOKIE_NAME,
         value=refresh_token,

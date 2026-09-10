@@ -31,7 +31,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DJANGO_DEBUG")
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
 
@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "apps.core",
+    "apps.activity",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -102,7 +103,7 @@ CACHES = {
 }
 
 REST_FRAMEWORK = {
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "apps.core.schema.FrontendAutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
@@ -160,12 +161,23 @@ AUTH_REFRESH_COOKIE_SAMESITE = env("AUTH_REFRESH_COOKIE_SAMESITE", default="Lax"
 AUTH_REFRESH_COOKIE_SECURE = env.bool("AUTH_REFRESH_COOKIE_SECURE", default=not DEBUG)
 AUTH_REFRESH_COOKIE_HTTPONLY = True
 AUTH_REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
+AUTH_ENABLE_EMAIL_SIGNUP = env.bool("AUTH_ENABLE_EMAIL_SIGNUP", default=False)
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
+CSRF_FAILURE_VIEW = "apps.core.csrf.failure"
+SESSION_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(BASE_DIR / "private-media")))
+ATTACHMENT_MAX_BYTES = env.int("ATTACHMENT_MAX_BYTES", default=10 * 1024 * 1024)
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "NavaBoard API",
     "DESCRIPTION": "API documentation for the NavaBoard project.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {"withCredentials": True, "persistAuthorization": False},
     "SORT_OPERATIONS": False,
     "TAGS": [
         {"name": "Authentication"},
@@ -186,13 +198,13 @@ SPECTACULAR_SETTINGS = {
 OTP_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
     "OTP_DEVELOPMENT_CODE_IN_RESPONSE",
     default=DEBUG,
-)
+) and DEBUG
 
 
 EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE = env.bool(
     "EMAIL_VERIFICATION_DEVELOPMENT_CODE_IN_RESPONSE",
     default=DEBUG,
-)
+) and DEBUG
 
 SMS_PROVIDER = env(
     "SMS_PROVIDER",

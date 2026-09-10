@@ -99,7 +99,11 @@ from apps.accounts.services.notifications import (
 )
 
 from django.conf import settings
-from drf_spectacular.utils import extend_schema
+from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import APIException, ValidationError as DRFValidationError
@@ -112,8 +116,20 @@ class NotificationDeliveryAPIException(APIException):
     default_code = "notification_delivery_failed"
 
 
+class CSRFTokenAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(tags=["Authentication"], summary="Initialize browser CSRF protection", description="Call before login, refresh or logout with credentials included. Send csrfToken in X-CSRFToken on those POST requests. The browser stores the CSRF cookie automatically.", responses=inline_serializer("CSRFTokenResponse", fields={"csrfToken": serializers.CharField()}))
+    def get(self, request):
+        response = Response({"csrfToken": get_token(request)})
+        response["Cache-Control"] = "no-store"
+        return response
+
+
 class OTPRequestAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = OTPRequestSerializer
     throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
 
@@ -158,8 +174,10 @@ class OTPRequestAPIView(APIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class OTPVerificationAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = OTPVerificationSerializer
     throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
 
@@ -205,8 +223,10 @@ class OTPVerificationAPIView(APIView):
 
         return response
 
+@method_decorator(csrf_protect, name="dispatch")
 class TokenRefreshAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = [TokenRefreshIPThrottle]
 
     @extend_schema(
@@ -237,8 +257,10 @@ class TokenRefreshAPIView(APIView):
 
         return response
 
+@method_decorator(csrf_protect, name="dispatch")
 class LogoutAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
     @extend_schema(
         request=None,
@@ -322,8 +344,10 @@ class CurrentUserProfileAPIView(APIView):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_protect, name="dispatch")
 class EmailPasswordLoginAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = EmailPasswordLoginSerializer
     throttle_classes = [EmailLoginIPThrottle, EmailLoginEmailThrottle]
 
@@ -372,6 +396,7 @@ class EmailPasswordLoginAPIView(APIView):
 
 class EmailSignupRequestAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = EmailSignupRequestSerializer
     throttle_classes = [
         EmailCodeRequestIPThrottle,
@@ -389,6 +414,8 @@ class EmailSignupRequestAPIView(APIView):
         tags=["Authentication"],
     )
     def post(self, request):
+        if not settings.AUTH_ENABLE_EMAIL_SIGNUP:
+            return Response({"detail": "Sign in with phone OTP, then add an email from your profile."}, status=410)
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -422,6 +449,7 @@ class EmailSignupRequestAPIView(APIView):
 
 class EmailSignupConfirmAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = EmailSignupConfirmRequestSerializer
     throttle_classes = [
         EmailCodeVerificationIPThrottle,
@@ -439,6 +467,8 @@ class EmailSignupConfirmAPIView(APIView):
         tags=["Authentication"],
     )
     def post(self, request):
+        if not settings.AUTH_ENABLE_EMAIL_SIGNUP:
+            return Response({"detail": "Sign in with phone OTP, then add an email from your profile."}, status=410)
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -550,6 +580,7 @@ class ChangePasswordAPIView(APIView):
 
 class PasswordResetRequestAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = [OTPRequestIPThrottle, OTPRequestPhoneThrottle]
 
     @extend_schema(
@@ -595,6 +626,7 @@ class PasswordResetRequestAPIView(APIView):
 
 class PasswordResetConfirmAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = [OTPVerificationIPThrottle, OTPVerificationPhoneThrottle]
 
     @extend_schema(

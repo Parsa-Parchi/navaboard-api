@@ -1,3 +1,4 @@
+from apps.core.fields import IranianPhoneField
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -147,7 +148,7 @@ class BoardMembershipReadSerializer(serializers.ModelSerializer):
 
 
 class BoardMemberCreateSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
+    phone_number = IranianPhoneField()
     role = serializers.ChoiceField(
         choices=(
             BoardMembership.Role.ADMIN,

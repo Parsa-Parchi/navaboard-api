@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.boards.models import Card
+from apps.boards.services.ordering import persist_order
 from apps.collaboration.models import (
     Checklist,
     ChecklistItem,
@@ -17,16 +18,7 @@ def _resequence(objects) -> None:
 
     model = objects[0].__class__
 
-    for index, obj in enumerate(objects):
-        model.objects.filter(pk=obj.pk).update(
-            position=1000000 + index
-        )
-
-    for index, obj in enumerate(objects):
-        model.objects.filter(pk=obj.pk).update(
-            position=index
-        )
-        obj.position = index
+    persist_order(model.objects.filter(pk__in=[obj.pk for obj in objects]), objects)
 
 
 @transaction.atomic
@@ -94,6 +86,7 @@ def move_checklist(
     checklist: Checklist,
     position: int,
 ) -> Checklist:
+    Card.objects.select_for_update().get(pk=checklist.card_id)
     siblings = list(
         Checklist.objects.select_for_update()
         .filter(card_id=checklist.card_id)
@@ -146,6 +139,7 @@ def delete_checklist(
     *,
     checklist: Checklist,
 ) -> None:
+    Card.objects.select_for_update().get(pk=checklist.card_id)
     siblings = list(
         Checklist.objects.select_for_update()
         .filter(card_id=checklist.card_id)
@@ -256,6 +250,7 @@ def move_checklist_item(
     item: ChecklistItem,
     position: int,
 ) -> ChecklistItem:
+    Checklist.objects.select_for_update().get(pk=item.checklist_id)
     siblings = list(
         ChecklistItem.objects.select_for_update()
         .filter(
@@ -310,6 +305,7 @@ def delete_checklist_item(
     *,
     item: ChecklistItem,
 ) -> None:
+    Checklist.objects.select_for_update().get(pk=item.checklist_id)
     siblings = list(
         ChecklistItem.objects.select_for_update()
         .filter(

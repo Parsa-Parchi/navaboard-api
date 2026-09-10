@@ -10,6 +10,18 @@ from apps.workspaces.models import WorkspaceMembership
 from apps.core.models import SoftDeleteModel
 
 
+class Attachment(SoftDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name="attachments")
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    file = models.FileField(upload_to="attachments/%Y/%m/")
+    original_name = models.CharField(max_length=255)
+    size = models.PositiveBigIntegerField()
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+
+
 class CardAssignee(models.Model):
     id = models.UUIDField(
         primary_key=True,
@@ -237,6 +249,7 @@ class Checklist(SoftDeleteModel):
             ),
             models.UniqueConstraint(
                 fields=("card", "position"),
+                condition=Q(deleted_at__isnull=True),
                 name="checklist_unique_card_position",
             ),
         ]
@@ -280,6 +293,7 @@ class ChecklistItem(SoftDeleteModel):
             ),
             models.UniqueConstraint(
                 fields=("checklist", "position"),
+                condition=Q(deleted_at__isnull=True),
                 name="checklist_item_unique_position",
             ),
         ]

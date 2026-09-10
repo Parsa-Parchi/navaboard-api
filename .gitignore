@@ -221,3 +221,5 @@ __marimo__/
 .env
 .env.*
 !.env.example
+private-media/
+staticfiles/

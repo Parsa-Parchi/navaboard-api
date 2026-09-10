@@ -150,13 +150,10 @@ def move_card(
         )
     }
 
-    source_list = locked_lists[
-        card.board_list_id
-    ]
-
-    destination_list = locked_lists[
-        destination_list.pk
-    ]
+    if card.board_list_id not in locked_lists or destination_list.pk not in locked_lists:
+        raise ValidationError("A list changed or was deleted. Reload the board and retry.")
+    source_list = locked_lists[card.board_list_id]
+    destination_list = locked_lists[destination_list.pk]
 
     if source_list.board_id != destination_list.board_id:
         raise ValidationError(
@@ -177,11 +174,9 @@ def move_card(
         )
     )
 
-    moving_card = next(
-        item
-        for item in source_cards
-        if item.pk == card.pk
-    )
+    moving_card = next((item for item in source_cards if item.pk == card.pk), None)
+    if moving_card is None:
+        raise ValidationError("Card changed or was deleted. Reload the board and retry.")
 
     if source_list.pk == destination_list.pk:
         target_position = normalize_move_position(
