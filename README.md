@@ -8,6 +8,7 @@ Django 5.2, PostgreSQL, DRF, SimpleJWT and drf-spectacular.
 - Phone OTP registration/login; optional verified email/password added afterward.
 - Access tokens in JSON; rotating refresh tokens in HttpOnly cookies; CSRF protection.
 - Workspaces, ownership transfer, roles and owner-only workspace deletion.
+- Workspace and board members must already have a NavaBoard account; member lookup uses their phone number.
 - Private/workspace-visible boards, board membership, ordered lists/cards and deadlines.
 - Labels, checklists/items, comments, assignees and private file attachments.
 - Paginated card search, activity history and persistent in-app notifications.
