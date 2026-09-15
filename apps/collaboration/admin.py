@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib import admin
 
 from apps.collaboration.models import (
+    Attachment,
     CardAssignee,
     CardLabel,
     Checklist,
@@ -11,6 +12,14 @@ from apps.collaboration.models import (
     Comment,
     Label,
 )
+
+
+@admin.register(Attachment)
+class AttachmentAdmin(admin.ModelAdmin):
+    list_display = ("id", "original_name", "card", "uploaded_by", "size", "created_at")
+    search_fields = ("original_name", "card__title", "uploaded_by__phone_number")
+    list_select_related = ("card", "uploaded_by")
+    readonly_fields = ("created_at", "updated_at", "deleted_at", "size")
 
 
 @admin.register(CardAssignee)
