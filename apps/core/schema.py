@@ -22,7 +22,7 @@ RESOURCES = {
     "CardMoveAPIView": ("card position", "Board member/workspace owner required.", "Send destination_list_id and zero-based position. Destination must be on the same board. Moving within a list accepts 0..count-1; between lists accepts 0..destination count. Re-fetch both lists."),
     "BoardLabelListCreateAPIView": ("board labels", "Board readers may list; board admin/workspace owner may create.", "Send name and color. Use returned label UUID to attach to cards."),
     "BoardLabelDetailAPIView": ("board label", "Board admin/workspace owner required.", "Update name/color or delete the board label."),
-    "CardLabelCreateAPIView": ("card label", "Board member/workspace owner required.", "Send label_id belonging to the same board."),
+    "CardLabelCreateAPIView": ("card labels", "Board readers may list; board member/workspace owner required to attach.", "GET returns active associations with nested label metadata. POST label_id belonging to the same board."),
     "CardLabelDetailAPIView": ("card label link", "Board member/workspace owner required.", "Removes only the association; the board label remains available."),
     "ChecklistListCreateAPIView": ("card checklists", "Board readers may list; board members/workspace owner may create.", "Send title to append a checklist. Read response includes its ordered items."),
     "ChecklistDetailAPIView": ("checklist", "Board member/workspace owner required.", "Update title or soft-delete the checklist; items become inaccessible."),

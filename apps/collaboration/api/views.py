@@ -472,6 +472,17 @@ class CardLabelCreateAPIView(ActivityMutationMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        tags=["Collaboration"],
+        summary="List labels attached to a card",
+        description="Board readers may retrieve active label associations for this card.",
+        responses={200: CardLabelReadSerializer(many=True)},
+    )
+    def get(self, request, card_id):
+        card = _get_visible_card(user=request.user, card_id=card_id)
+        links = card.label_links.filter(label__deleted_at__isnull=True).select_related("label").order_by("label__created_at", "pk")
+        return Response(CardLabelReadSerializer(links, many=True).data)
+
+    @extend_schema(
         request=CardLabelCreateSerializer,
         responses={
             status.HTTP_201_CREATED: CardLabelReadSerializer
