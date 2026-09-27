@@ -8,6 +8,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.activity.mixins import ActivityMutationMixin
+from apps.core.search import TextSearchParameters, filter_named_resources
+from apps.boards.api.filters import CardSearchParameters, filter_cards
 
 from apps.boards.api.permissions import (
     CanEditBoard,
@@ -138,6 +140,7 @@ def _get_visible_board_detail(
     *,
     user,
     board_id,
+    filters=None,
 ) -> Board:
     cards_queryset = (
         Card.objects.select_related(
@@ -147,6 +150,9 @@ def _get_visible_board_detail(
             "created_at",
         )
     )
+
+    if filters is not None:
+        cards_queryset = filter_cards(cards_queryset, filters, user)
 
     lists_queryset = (
         BoardList.objects.order_by(
@@ -230,9 +236,11 @@ def _get_board_workspace_membership(
     ),
 )
 class BoardListCreateAPIView(ActivityMutationMixin, APIView):
+    supports_search = True
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        parameters=[TextSearchParameters],
         description="Board management endpoint. Handles boards, lists, cards, and membership operations. Required permissions and request fields are defined in the schema.",
         tags=["Boards"],
         summary="List boards in workspace",
@@ -256,6 +264,7 @@ class BoardListCreateAPIView(ActivityMutationMixin, APIView):
             workspace=workspace,
         )
 
+        boards = filter_named_resources(boards, request.query_params)
         serializer = BoardReadSerializer(
             boards,
             many=True,
@@ -337,6 +346,7 @@ class BoardListCreateAPIView(ActivityMutationMixin, APIView):
     ),
 )
 class BoardDetailAPIView(ActivityMutationMixin, APIView):
+    supports_search = True
     permission_classes = [IsAuthenticated]
 
     def get_object(
@@ -362,6 +372,7 @@ class BoardDetailAPIView(ActivityMutationMixin, APIView):
 
     @extend_schema(
         summary="Get board details",
+        parameters=[CardSearchParameters],
         responses={
             status.HTTP_200_OK: BoardDetailReadSerializer
         },
@@ -373,9 +384,12 @@ class BoardDetailAPIView(ActivityMutationMixin, APIView):
         request,
         board_id,
     ):
+        parameters = CardSearchParameters(data=request.query_params)
+        parameters.is_valid(raise_exception=True)
         board = _get_visible_board_detail(
             user=request.user,
             board_id=board_id,
+            filters=parameters.validated_data,
         )
 
         if not CanViewBoard().has_object_permission(

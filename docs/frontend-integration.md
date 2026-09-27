@@ -313,9 +313,88 @@ to a private board; add board membership separately when needed.
 
 ## 6. Search, activity and notifications
 
-`GET /api/cards/` searches accessible cards. Supported filters combine:
-`q` (title/description), `workspace_id`, `board_id`, `assigned_to_me`, `due_before`,
-`due_after`. Dates use ISO 8601 with timezone. Deleted/inaccessible ancestors are excluded.
+### Workspace and board search
+
+- `GET /api/workspaces/?q=product` searches your active workspaces by name or
+  description. The response remains an array.
+- `GET /api/workspaces/{workspace_id}/boards/?q=sprint` searches visible boards in
+  that workspace. The response remains an array.
+- `GET /api/boards/?q=sprint` searches visible boards across all your workspaces.
+  This new endpoint is paginated; optional `workspace_id` narrows it.
+
+These name searches are literal, case-insensitive substring searches. Empty or
+whitespace-only `q` removes the text filter; maximum length is 200 characters.
+Private boards and deleted resources never become visible through search.
+
+### Card search and filtering a board
+
+`GET /api/cards/` searches accessible cards with newest-first pagination. Results
+include `board_id`, `board_name`, `workspace_id` and `list_title` so the frontend can
+navigate directly to a result without looking up every parent separately.
+
+`GET /api/boards/{board_id}/?q=login&assigned_to_me=true` applies the same filters
+to the cards nested in the hydrated board. All active columns remain present,
+including empty columns, and original positions are retained. Removing the query
+restores the complete board. Filtering never mutates data. Disable drag-and-drop
+while filtered, or fetch the unfiltered order before calculating move positions;
+an index among visible matches is not the stored position.
+
+Supported query parameters:
+
+| Parameter | Meaning |
+| --- | --- |
+| `q` | Words/quoted phrases in title or description, or the operators below |
+| `workspace_id`, `board_id`, `list_id` | Restrict parents; UUIDs |
+| `assigned_to_me` | `true`: assigned to current user; `false`: not assigned to current user; omit: both |
+| `member_ids` | Repeat the parameter for user UUIDs; any selected assignee matches |
+| `label_ids` | Repeat the parameter for label UUIDs; any selected active label matches |
+| `has_members`, `has_labels`, `has_attachments` | `true`/`false`; omit to disable this filter |
+| `due` | `overdue`, `day` (next 24h), `week` (next 7d), or `none` |
+| `due_before`, `due_after` | Inclusive ISO 8601 timestamps with timezone |
+
+Filter groups combine with AND. Values within `member_ids` or `label_ids` combine
+with OR. Each multi-select accepts at most 20 UUIDs. Unknown IDs simply match no
+cards; they never bypass authorization. Omitted boolean filters do not mean false.
+No deadline is different from an overdue deadline. Dates are not completion status.
+
+Card query syntax (maximum 200 characters and 20 terms):
+
+```text
+login OTP                           # both terms, in title/description
+"login page"                        # contiguous phrase
+board:"Sprint Alpha" list:"To Do"   # parent names
+name:login description:mobile
+@me label:Urgent                    # current user's assignment and label name
+comment:review checklist:release    # active comments/checklists/items
+has:attachments -has:members        # attachment present, no assignee
+due:overdue -label:Blocked
+```
+
+`member:me` is an alias for `@me`; `#Urgent` is an alias for `label:Urgent`.
+Only double quotes delimit phrases; apostrophes in words remain literal.
+Prefix any term with `-` to exclude matching
+cards. Repeated operators also combine with AND. Related-content operators ignore
+soft-deleted rows. Invalid quotes, invalid filters, unsupported operators and
+oversized queries return 400 rather than being silently interpreted.
+
+This implements a documented Trello-inspired subset, not Trello's complete search
+language: archived/completed/starred states, saved searches, fuzzy relevance,
+arbitrary `@username`, advanced date operators and cross-product Atlassian results
+are not supported. Board/workspace name searches do not parse card operators.
+
+Build query strings with `URLSearchParams`, debounce typing (for example 300 ms),
+cancel stale requests or ignore their results, and reset pagination after a filter
+changes. Example using the existing `api` helper:
+
+```javascript
+const query = new URLSearchParams({ q: 'login', assigned_to_me: 'true' });
+for (const id of selectedLabelIds) query.append('label_ids', id);
+const filteredBoard = await api(`boards/${boardId}/?${query}`);
+```
+
+For a global search dropdown, request workspace/board/card endpoints separately
+and show resource groups. Do not treat a first paginated page as the complete
+result set. Name-search input and advanced card-query input have different syntax.
 
 | Endpoint | Result |
 | --- | --- |
@@ -389,6 +468,19 @@ DELETE `/api/cards/{card_id}/attachments/{attachment_id}/` soft-deletes metadata
 and blocks further downloads. Physical blobs remain private under retention policy.
 
 ## 8. Errors and deletion
+
+Authenticated domain APIs share per-user read and action budgets. Defaults are
+600 reads/minute, 120 actions/minute (POST/PUT/PATCH/DELETE), and an additional
+120 searches/minute. Global `/api/cards/` and `/api/boards/` always consume the
+search budget; workspace/board listing and hydrated-board reads with query
+parameters also consume it. Search requests count toward the read budget too.
+Ordinary notification polling does not use the search budget.
+
+Limits return 429 with `Retry-After`. They are configurable via `API_READ_RATE`,
+`API_ACTION_RATE`, `API_SEARCH_RATE`; do not hard-code them in the UI. Existing
+OTP/email/password/refresh-specific throttles are preserved. These are request
+budgets, not plan quotas on how many boards/cards may exist or monthly automation
+runs. Invalid requests that reach throttle checks can also consume the budget.
 
 | Status | Frontend behavior |
 | --- | --- |

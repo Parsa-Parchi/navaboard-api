@@ -32,7 +32,22 @@ Review deployment checks for redirects/HSTS and proxy-specific settings. This
 repository does not assume control of TLS termination or trust forwarded headers.
 `/health/` checks database readiness without exposing connection details.
 
-## Retention and maintenance
+## API traffic budgets
+
+`API_READ_RATE` (default `600/minute`), `API_ACTION_RATE` (`120/minute`) and
+`API_SEARCH_RATE` (`120/minute`) limit authenticated domain traffic per user.
+Mutation budgets span endpoints, preventing users from evading a budget by
+switching between card, comment and membership operations. Rejected mutations
+do not run their handlers or create activity records. Authentication routes keep
+their existing route-specific OTP/email/password/refresh limits.
+
+Use a shared Redis cache for multiple workers; local-memory counters are local to
+each process. DRF cache-based throttles are approximate under concurrent requests,
+not atomic billing quotas or DDoS protection. Configure proxy/edge limits as well
+and set trusted proxy/IP handling correctly. Cache availability is operationally
+important; do not silently disable limits when Redis is unavailable.
+
+## Retention jobs
 
 Schedule `python manage.py flushexpiredtokens` daily. Monitor HTTP errors, database,
 cache, storage and provider failures; verify backup restoration.

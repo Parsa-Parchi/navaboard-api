@@ -1,25 +1,33 @@
-from django.db.models import Q
 from django.urls import path
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, serializers
 
 from apps.activity.api import FeedPagination
-from apps.boards.api.serializers import CardReadSerializer
+from apps.boards.api.serializers import CardReadSerializer, BoardReadSerializer
+from apps.boards.api.filters import CardSearchParameters, filter_cards
+from apps.boards.api.views import _board_queryset_for_user
 from apps.collaboration.api.views import _card_queryset_for_user
+from apps.core.search import TextSearchParameters, filter_named_resources
 
 
-class CardSearchParameters(serializers.Serializer):
-    q = serializers.CharField(required=False, max_length=200, allow_blank=True)
+class BoardSearchParameters(TextSearchParameters):
     workspace_id = serializers.UUIDField(required=False)
-    board_id = serializers.UUIDField(required=False)
-    assigned_to_me = serializers.BooleanField(required=False)
-    due_before = serializers.DateTimeField(required=False)
-    due_after = serializers.DateTimeField(required=False)
 
 
-@extend_schema(tags=["Cards"], summary="Search your accessible cards", description="Paginated newest-first search over card title/description. Combines all supplied filters. Private, deleted and inaccessible board/list/workspace contents are excluded. Dates are ISO 8601 with timezone.", parameters=[CardSearchParameters])
+class CardSearchReadSerializer(CardReadSerializer):
+    board_id = serializers.UUIDField(source="board_list.board_id", read_only=True)
+    board_name = serializers.CharField(source="board_list.board.name", read_only=True)
+    workspace_id = serializers.UUIDField(source="board_list.board.workspace_id", read_only=True)
+    list_title = serializers.CharField(source="board_list.title", read_only=True)
+
+    class Meta(CardReadSerializer.Meta):
+        fields = CardReadSerializer.Meta.fields + ("board_id", "board_name", "workspace_id", "list_title")
+
+
+@extend_schema(tags=["Cards"], summary="Search your accessible cards", description="Paginated newest-first search. All words/operators and filter groups combine with AND; member_ids and label_ids each match any selected value. Quoted phrases and negative terms are supported. Only accessible active cards and active related content are searched. Use board_id to scope to a board, or filter the hydrated board endpoint to preserve columns. Dates are ISO 8601 with timezone. Unsupported operators and malformed filters return 400; traffic limits return 429 with Retry-After.", parameters=[CardSearchParameters])
 class CardSearch(generics.ListAPIView):
-    serializer_class = CardReadSerializer
+    is_search_view = True
+    serializer_class = CardSearchReadSerializer
     pagination_class = FeedPagination
 
     def get_queryset(self):
@@ -29,21 +37,27 @@ class CardSearch(generics.ListAPIView):
         parameters = CardSearchParameters(data=self.request.query_params)
         parameters.is_valid(raise_exception=True)
         values = parameters.validated_data
-        query = _card_queryset_for_user(self.request.user)
-        if values.get("q"):
-            query = query.filter(Q(title__icontains=values["q"]) | Q(description__icontains=values["q"]))
-        for name, lookup in {
-            "workspace_id": "board_list__board__workspace_id",
-            "board_id": "board_list__board_id",
-            "due_before": "due_at__lte",
-            "due_after": "due_at__gte",
-        }.items():
-            if name in values:
-                query = query.filter(**{lookup: values[name]})
-        if "assigned_to_me" in values:
-            lookup = {"assignees__workspace_membership__user": self.request.user}
-            query = query.filter(**lookup) if values["assigned_to_me"] else query.exclude(**lookup)
+        query = filter_cards(_card_queryset_for_user(self.request.user), values, self.request.user)
         return query.order_by("-created_at", "-id").distinct()
 
 
-urlpatterns = [path("cards/", CardSearch.as_view(), name="card-search")]
+@extend_schema(tags=["Boards"], summary="Search boards across your workspaces", description="Paginated boards visible to the current user, newest first. q is a literal case-insensitive substring of name or description. Optional workspace_id narrows the search. Private boards require board membership or workspace ownership; deleted workspaces and boards are excluded. Empty q lists accessible boards. Rate limits return 429 and Retry-After.", parameters=[BoardSearchParameters])
+class BoardSearch(generics.ListAPIView):
+    is_search_view = True
+    serializer_class = BoardReadSerializer
+    pagination_class = FeedPagination
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            from apps.boards.models import Board
+            return Board.objects.none()
+        parameters = BoardSearchParameters(data=self.request.query_params)
+        parameters.is_valid(raise_exception=True)
+        query = filter_named_resources(_board_queryset_for_user(self.request.user), self.request.query_params)
+        if "workspace_id" in parameters.validated_data:
+            query = query.filter(workspace_id=parameters.validated_data["workspace_id"])
+        return query.order_by("-created_at", "-id")
+
+
+urlpatterns = [path("cards/", CardSearch.as_view(), name="card-search"),
+               path("boards/", BoardSearch.as_view(), name="board-search")]

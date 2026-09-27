@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.activity.mixins import ActivityMutationMixin
+from apps.core.search import TextSearchParameters, filter_named_resources
 
 from apps.workspaces.api.permissions import (
     IsWorkspaceAdmin,
@@ -81,16 +82,18 @@ def _get_active_user(*, phone_number):
         ) from exc
 
 class WorkspaceListCreateAPIView(ActivityMutationMixin, APIView):
+    supports_search = True
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        parameters=[TextSearchParameters],
         responses={status.HTTP_200_OK: WorkspaceReadSerializer(many=True)},
         summary="Workspace API operation",
         description="Workspace management endpoint. Handles workspace data, members, roles, and ownership operations. Check request and response schemas for required fields.",
         tags=["Workspaces"],
     )
     def get(self, request):
-        workspaces = _workspace_queryset_for_user(request.user)
+        workspaces = filter_named_resources(_workspace_queryset_for_user(request.user), request.query_params)
         serializer = WorkspaceReadSerializer(
             workspaces,
             many=True,

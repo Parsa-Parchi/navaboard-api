@@ -22,6 +22,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/CSRFTokenResponse'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/auth/otp/request/:
     post:
       operationId: auth_otp_request_create
@@ -271,6 +286,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       parameters:
       - name: X-CSRFToken
         in: header
@@ -316,6 +346,21 @@ paths:
                         type: string
         '403':
           description: Insufficient permission or invalid CSRF.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -383,6 +428,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     patch:
       operationId: auth_me_partial_update
       description: |-
@@ -436,6 +496,21 @@ paths:
                         type: string
         '403':
           description: Insufficient permission or invalid CSRF.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -1087,10 +1162,17 @@ paths:
       description: |-
         Authentication required. GET returns only your memberships; POST makes you the owner.
 
-        Create with name and optional description.
+        GET accepts optional q: case-insensitive literal substring of name/description (max 200 characters). Empty q lists all your active workspaces. Response remains an array. Create with name and optional description.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Get workspaces
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+        description: Case-insensitive substring of name or description.
       tags:
       - Workspaces
       security:
@@ -1147,12 +1229,27 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     post:
       operationId: workspaces_create
       description: |-
         Authentication required. GET returns only your memberships; POST makes you the owner.
 
-        Create with name and optional description.
+        GET accepts optional q: case-insensitive literal substring of name/description (max 200 characters). Empty q lists all your active workspaces. Response remains an array. Create with name and optional description.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Create workspaces
@@ -1231,6 +1328,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/workspaces/{workspace_id}/:
     get:
       operationId: workspaces_retrieve
@@ -1295,6 +1407,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -1389,6 +1516,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     delete:
       operationId: workspaces_destroy
       description: |-
@@ -1448,6 +1590,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -1521,6 +1678,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -1612,6 +1784,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -1713,6 +1900,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     delete:
       operationId: workspaces_members_destroy
       description: |-
@@ -1778,6 +1980,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -1874,17 +2091,38 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/workspaces/{workspace_id}/boards/:
     get:
       operationId: workspaces_boards_list
       description: |-
         Workspace membership required. Only visible boards are listed. Creator becomes board admin.
 
-        visibility is private or workspace. Workspace-visible boards are readable by workspace members; editing still requires board membership.
+        GET accepts q: literal case-insensitive substring of name/description (max 200 characters); response remains an array. For cross-workspace paginated search use GET /api/boards/. visibility is private or workspace. Reading does not grant editing.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Get boards in workspace
       parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+        description: Case-insensitive substring of name or description.
       - in: path
         name: workspace_id
         schema:
@@ -1947,12 +2185,27 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     post:
       operationId: workspaces_boards_create
       description: |-
         Workspace membership required. Only visible boards are listed. Creator becomes board admin.
 
-        visibility is private or workspace. Workspace-visible boards are readable by workspace members; editing still requires board membership.
+        GET accepts q: literal case-insensitive substring of name/description (max 200 characters); response remains an array. For cross-workspace paginated search use GET /api/boards/. visibility is private or workspace. Reading does not grant editing.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Create boards in workspace
@@ -2038,23 +2291,123 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/boards/{board_id}/:
     get:
       operationId: boards_retrieve
       description: |-
         Workspace owner or board member may read; workspace-visible boards also allow workspace members to read. Board admin/workspace owner may update or delete.
 
-        GET includes ordered lists and cards for initial board hydration. DELETE soft-deletes the board.
+        GET includes ordered lists and cards. Optional q and the same filters as GET /api/cards/ filter nested cards while preserving all active columns (including empty columns) and original positions. Filters combine with AND; each label_ids/member_ids group matches any selected value. Removing filters restores the full board; no data is modified. Do not use visible filtered indices as move positions: reload unfiltered state before moving. DELETE soft-deletes the board.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Get board
       parameters:
+      - in: query
+        name: assigned_to_me
+        schema:
+          type: boolean
       - in: path
         name: board_id
         schema:
           type: string
           format: uuid
         required: true
+      - in: query
+        name: board_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: due
+        schema:
+          enum:
+          - overdue
+          - day
+          - week
+          - none
+          type: string
+          minLength: 1
+        description: |-
+          overdue: before now; day/week: next 24h/7d; none: no deadline.
+
+          * `overdue` - overdue
+          * `day` - day
+          * `week` - week
+          * `none` - none
+      - in: query
+        name: due_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: due_before
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: has_attachments
+        schema:
+          type: boolean
+      - in: query
+        name: has_labels
+        schema:
+          type: boolean
+      - in: query
+        name: has_members
+        schema:
+          type: boolean
+      - in: query
+        name: label_ids
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 20
+        description: Repeat label_ids for label UUIDs. Matches any selected label.
+      - in: query
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: member_ids
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 20
+        description: Repeat member_ids for user UUIDs. Matches any selected member.
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+        description: 'Words/double-quoted phrases, @me, #Label, name:, description:,
+          board:, list:, label:, comment:, checklist:, has:members/labels/attachments,
+          due:overdue/day/week/none. Prefix a token with - to exclude. All terms must
+          match. Unsupported operators return 400.'
+      - in: query
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
       tags:
       - Boards
       security:
@@ -2109,12 +2462,27 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     patch:
       operationId: boards_partial_update
       description: |-
         Workspace owner or board member may read; workspace-visible boards also allow workspace members to read. Board admin/workspace owner may update or delete.
 
-        GET includes ordered lists and cards for initial board hydration. DELETE soft-deletes the board.
+        GET includes ordered lists and cards. Optional q and the same filters as GET /api/cards/ filter nested cards while preserving all active columns (including empty columns) and original positions. Filters combine with AND; each label_ids/member_ids group matches any selected value. Removing filters restores the full board; no data is modified. Do not use visible filtered indices as move positions: reload unfiltered state before moving. DELETE soft-deletes the board.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Update board
@@ -2196,12 +2564,27 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     delete:
       operationId: boards_destroy
       description: |-
         Workspace owner or board member may read; workspace-visible boards also allow workspace members to read. Board admin/workspace owner may update or delete.
 
-        GET includes ordered lists and cards for initial board hydration. DELETE soft-deletes the board.
+        GET includes ordered lists and cards. Optional q and the same filters as GET /api/cards/ filter nested cards while preserving all active columns (including empty columns) and original positions. Filters combine with AND; each label_ids/member_ids group matches any selected value. Removing filters restores the full board; no data is modified. Do not use visible filtered indices as move positions: reload unfiltered state before moving. DELETE soft-deletes the board.
 
         Identifiers are UUIDs. Send Authorization: Bearer <access>. Successful mutations are recorded in activity history. Validation errors return 400; insufficient permissions return 403; missing or invisible objects return 404. Collection responses are arrays unless a pagination envelope is shown in the response schema.
       summary: Delete board
@@ -2255,6 +2638,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -2327,6 +2725,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -2418,6 +2831,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -2519,6 +2947,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Update board membership
     delete:
       operationId: boards_members_destroy
@@ -2584,6 +3027,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -2658,6 +3116,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -2749,6 +3222,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -2850,6 +3338,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     delete:
       operationId: boards_lists_destroy
       description: |-
@@ -2915,6 +3418,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -3017,6 +3535,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/boards/{board_id}/lists/{list_id}/cards/:
     get:
       operationId: boards_lists_cards_list
@@ -3089,6 +3622,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -3196,6 +3744,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/boards/{board_id}/cards/{card_id}/:
     get:
       operationId: boards_cards_retrieve
@@ -3266,6 +3829,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -3369,6 +3947,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     delete:
       operationId: boards_cards_destroy
       description: |-
@@ -3434,6 +4027,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -3539,6 +4147,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/workspaces/{workspace_id}/activity/:
     get:
       operationId: workspaces_activity_list
@@ -3576,6 +4199,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedActivityList'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/boards/{board_id}/activity/:
     get:
       operationId: boards_activity_list
@@ -3613,6 +4251,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedActivityList'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/cards/{card_id}/activity/:
     get:
       operationId: cards_activity_list
@@ -3650,6 +4303,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedActivityList'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/notifications/:
     get:
       operationId: notifications_list
@@ -3686,6 +4354,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedNotificationList'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/notifications/unread-count/:
     get:
       operationId: notifications_unread_count_retrieve
@@ -3702,6 +4385,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationCountResponse'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/notifications/read-all/:
     post:
       operationId: notifications_read_all_create
@@ -3718,6 +4416,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationReadAllResponse'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/notifications/{notification_id}/read/:
     post:
       operationId: notifications_read_create
@@ -3741,6 +4454,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/Notification'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/cards/{card_id}/attachments/:
     get:
       operationId: cards_attachments_list
@@ -3767,6 +4495,21 @@ paths:
                 items:
                   $ref: '#/components/schemas/Attachment'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
     post:
       operationId: cards_attachments_create
       description: Board edit permission required. Send multipart/form-data with file.
@@ -3799,6 +4542,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/Attachment'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/cards/{card_id}/attachments/{attachment_id}/:
     delete:
       operationId: cards_attachments_destroy
@@ -3826,6 +4584,21 @@ paths:
       responses:
         '204':
           description: No response body
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/cards/{card_id}/attachments/{attachment_id}/content/:
     get:
       operationId: cards_attachments_content_retrieve
@@ -3858,12 +4631,31 @@ paths:
                 type: string
                 format: binary
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/cards/:
     get:
       operationId: cards_list
-      description: Paginated newest-first search over card title/description. Combines
-        all supplied filters. Private, deleted and inaccessible board/list/workspace
-        contents are excluded. Dates are ISO 8601 with timezone.
+      description: Paginated newest-first search. All words/operators and filter groups
+        combine with AND; member_ids and label_ids each match any selected value.
+        Quoted phrases and negative terms are supported. Only accessible active cards
+        and active related content are searched. Use board_id to scope to a board,
+        or filter the hydrated board endpoint to preserve columns. Dates are ISO 8601
+        with timezone. Unsupported operators and malformed filters return 400; traffic
+        limits return 429 with Retry-After.
       summary: Search your accessible cards
       parameters:
       - in: query
@@ -3876,6 +4668,23 @@ paths:
           type: string
           format: uuid
       - in: query
+        name: due
+        schema:
+          enum:
+          - overdue
+          - day
+          - week
+          - none
+          type: string
+          minLength: 1
+        description: |-
+          overdue: before now; day/week: next 24h/7d; none: no deadline.
+
+          * `overdue` - overdue
+          * `day` - day
+          * `week` - week
+          * `none` - none
+      - in: query
         name: due_after
         schema:
           type: string
@@ -3885,6 +4694,41 @@ paths:
         schema:
           type: string
           format: date-time
+      - in: query
+        name: has_attachments
+        schema:
+          type: boolean
+      - in: query
+        name: has_labels
+        schema:
+          type: boolean
+      - in: query
+        name: has_members
+        schema:
+          type: boolean
+      - in: query
+        name: label_ids
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 20
+        description: Repeat label_ids for label UUIDs. Matches any selected label.
+      - in: query
+        name: list_id
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: member_ids
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 20
+        description: Repeat member_ids for user UUIDs. Matches any selected member.
       - name: page
         required: false
         in: query
@@ -3902,6 +4746,10 @@ paths:
         schema:
           type: string
           maxLength: 200
+        description: 'Words/double-quoted phrases, @me, #Label, name:, description:,
+          board:, list:, label:, comment:, checklist:, has:members/labels/attachments,
+          due:overdue/day/week/none. Prefix a token with - to exclude. All terms must
+          match. Unsupported operators return 400.'
       - in: query
         name: workspace_id
         schema:
@@ -3916,8 +4764,82 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedCardReadList'
+                $ref: '#/components/schemas/PaginatedCardSearchReadList'
           description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+  /api/boards/:
+    get:
+      operationId: boards_list
+      description: Paginated boards visible to the current user, newest first. q is
+        a literal case-insensitive substring of name or description. Optional workspace_id
+        narrows the search. Private boards require board membership or workspace ownership;
+        deleted workspaces and boards are excluded. Empty q lists accessible boards.
+        Rate limits return 429 and Retry-After.
+      summary: Search boards across your workspaces
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+        description: Case-insensitive substring of name or description.
+      - in: query
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - Boards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBoardReadList'
+          description: ''
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
   /api/boards/{board_id}/labels/:
     get:
       operationId: boards_labels_list
@@ -3983,6 +4905,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -4074,6 +5011,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -4175,6 +5127,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Update board label
     delete:
       operationId: boards_labels_destroy
@@ -4240,6 +5207,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -4314,6 +5296,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -4408,6 +5405,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Create card labels
   /api/cards/{card_id}/labels/{label_id}/:
     delete:
@@ -4481,6 +5493,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Delete card label link
   /api/cards/{card_id}/checklists/:
     get:
@@ -4547,6 +5574,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -4642,6 +5684,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Create card checklists
   /api/checklists/{checklist_id}/:
     patch:
@@ -4730,6 +5787,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Update checklist
     delete:
       operationId: checklists_destroy
@@ -4789,6 +5861,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -4885,6 +5972,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Create checklist position
   /api/checklists/{checklist_id}/items/:
     post:
@@ -4967,6 +6069,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -5062,6 +6179,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Update checklist item
     delete:
       operationId: checklist_items_destroy
@@ -5121,6 +6253,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -5217,6 +6364,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Create checklist item position
   /api/cards/{card_id}/comments/:
     get:
@@ -5283,6 +6445,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -5378,6 +6555,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Create card comments
   /api/comments/{comment_id}/:
     patch:
@@ -5466,6 +6658,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Update comment
     delete:
       operationId: comments_destroy
@@ -5525,6 +6732,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -5598,6 +6820,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -5693,6 +6930,21 @@ paths:
                 properties:
                   detail:
                     type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
       summary: Create card assignees
   /api/cards/{card_id}/members/{assignee_id}/:
     delete:
@@ -5759,6 +7011,21 @@ paths:
                     type: string
         '404':
           description: Not found or not visible to this user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '429':
+          description: Request/action rate limit exceeded. Wait Retry-After seconds
+            before retrying.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry.
           content:
             application/json:
               schema:
@@ -6303,6 +7570,69 @@ components:
       - position
       - title
       - updated_at
+    CardSearchRead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_list_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        position:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        board_id:
+          type: string
+          format: uuid
+          readOnly: true
+        board_name:
+          type: string
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        list_title:
+          type: string
+          readOnly: true
+      required:
+      - board_id
+      - board_list_id
+      - board_name
+      - created_at
+      - created_by
+      - id
+      - list_title
+      - position
+      - title
+      - updated_at
+      - workspace_id
     ChangePasswordRequest:
       type: object
       properties:
@@ -6746,7 +8076,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Activity'
-    PaginatedCardReadList:
+    PaginatedBoardReadList:
       type: object
       required:
       - count
@@ -6768,7 +8098,30 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/CardRead'
+            $ref: '#/components/schemas/BoardRead'
+    PaginatedCardSearchReadList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardSearchRead'
     PaginatedNotificationList:
       type: object
       required:

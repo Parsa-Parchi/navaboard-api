@@ -41,3 +41,15 @@ class FrontendSchemaTests(SimpleTestCase):
                     with self.subTest(path=path, method=method):
                         self.assertFalse(set(content["example"]) - set(schema.get("properties", {})))
                         self.assertTrue(set(schema.get("required", [])) <= set(content["example"]))
+
+    def test_search_parameters_and_retry_contract(self):
+        paths = self.schema["paths"]
+        for path in ["/api/workspaces/", "/api/workspaces/{workspace_id}/boards/", "/api/boards/", "/api/boards/{board_id}/", "/api/cards/"]:
+            operation = paths[path]["get"]
+            with self.subTest(path=path):
+                self.assertIn("q", {p["name"] for p in operation["parameters"]})
+                self.assertIn("Retry-After", operation["responses"]["429"]["headers"])
+        for path in ["/api/cards/", "/api/boards/{board_id}/"]:
+            parameters = {p["name"]: p for p in paths[path]["get"]["parameters"]}
+            self.assertEqual(parameters["label_ids"]["schema"]["type"], "array")
+            self.assertIn("has_members", parameters)
