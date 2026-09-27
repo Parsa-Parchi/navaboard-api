@@ -103,6 +103,11 @@ CACHES = {
 }
 
 REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": [
+        "apps.core.throttles.ReadRateThrottle",
+        "apps.core.throttles.ActionRateThrottle",
+        "apps.core.throttles.SearchRateThrottle",
+    ],
     "DEFAULT_SCHEMA_CLASS": "apps.core.schema.FrontendAutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -111,6 +116,9 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_THROTTLE_RATES": {
+        "api_read": env("API_READ_RATE", default="600/minute"),
+        "api_action": env("API_ACTION_RATE", default="120/minute"),
+        "api_search": env("API_SEARCH_RATE", default="120/minute"),
         "otp_request_ip": env("OTP_REQUEST_IP_RATE", default="20/hour"),
         "otp_request_phone": env("OTP_REQUEST_PHONE_RATE", default="3/minute"),
         "otp_verify_ip": env("OTP_VERIFY_IP_RATE", default="60/hour"),

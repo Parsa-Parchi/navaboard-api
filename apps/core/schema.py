@@ -5,13 +5,13 @@ from drf_spectacular.openapi import AutoSchema
 
 # class: (resource, permission contract, operation-specific guidance)
 RESOURCES = {
-    "WorkspaceListCreateAPIView": ("workspaces", "Authentication required. GET returns only your memberships; POST makes you the owner.", "Create with name and optional description."),
+    "WorkspaceListCreateAPIView": ("workspaces", "Authentication required. GET returns only your memberships; POST makes you the owner.", "GET accepts optional q: case-insensitive literal substring of name/description (max 200 characters). Empty q lists all your active workspaces. Response remains an array. Create with name and optional description."),
     "WorkspaceDetailAPIView": ("workspace", "Members may read; owner/admin may update; only owner may delete.", "PATCH changes supplied fields only. Deleted workspaces and their boards are inaccessible."),
     "WorkspaceMembershipListCreateAPIView": ("workspace members", "Members may list. Owner/admin may add existing active users; admins may only add regular members.", "Supply phone_number and role (member/admin). Use membership id from the response when changing/removing members."),
     "WorkspaceMembershipDetailAPIView": ("workspace membership", "Only owner changes roles. Members may leave; owner/admin removal is restricted by role. Owner must transfer ownership before leaving.", "membership_id is the membership UUID, not the user UUID."),
     "WorkspaceOwnershipTransferAPIView": ("workspace ownership", "Only current owner; destination must already be a workspace member.", "Supply new_owner_phone_number. Previous owner becomes admin. Returns the new owner's membership."),
-    "BoardListCreateAPIView": ("boards in workspace", "Workspace membership required. Only visible boards are listed. Creator becomes board admin.", "visibility is private or workspace. Workspace-visible boards are readable by workspace members; editing still requires board membership."),
-    "BoardDetailAPIView": ("board", "Workspace owner or board member may read; workspace-visible boards also allow workspace members to read. Board admin/workspace owner may update or delete.", "GET includes ordered lists and cards for initial board hydration. DELETE soft-deletes the board."),
+    "BoardListCreateAPIView": ("boards in workspace", "Workspace membership required. Only visible boards are listed. Creator becomes board admin.", "GET accepts q: literal case-insensitive substring of name/description (max 200 characters); response remains an array. For cross-workspace paginated search use GET /api/boards/. visibility is private or workspace. Reading does not grant editing."),
+    "BoardDetailAPIView": ("board", "Workspace owner or board member may read; workspace-visible boards also allow workspace members to read. Board admin/workspace owner may update or delete.", "GET includes ordered lists and cards. Optional q and the same filters as GET /api/cards/ filter nested cards while preserving all active columns (including empty columns) and original positions. Filters combine with AND; each label_ids/member_ids group matches any selected value. Removing filters restores the full board; no data is modified. Do not use visible filtered indices as move positions: reload unfiltered state before moving. DELETE soft-deletes the board."),
     "BoardMembershipListCreateAPIView": ("board members", "Board readers may list. Board admin/workspace owner may add.", "Supply phone_number of an existing workspace member and role (admin/member)."),
     "BoardMembershipDetailAPIView": ("board membership", "Board administrator/workspace owner access is required. Workspace owner retains management access even without board membership.", "membership_id is a board membership UUID. Removing membership revokes private-board access."),
     "BoardListListCreateAPIView": ("board lists", "Board readers may list; board members/workspace owner may create.", "Lists are ordered by zero-based position. Omit position to append."),
@@ -123,4 +123,9 @@ class FrontendAutoSchema(AutoSchema):
                 if code == "400":
                     schema = {"oneOf": [{"type": "array", "items": {"type": "string"}}, {"type": "object", "additionalProperties": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}}]}
                 operation["responses"].setdefault(code, {"description": description, "content": {"application/json": {"schema": schema}}})
+        operation.setdefault("responses", {}).setdefault("429", {
+            "description": "Request/action rate limit exceeded. Wait Retry-After seconds before retrying.",
+            "headers": {"Retry-After": {"schema": {"type": "integer"}, "description": "Seconds until retry."}},
+            "content": {"application/json": {"schema": {"type": "object", "properties": {"detail": {"type": "string"}}}}},
+        })
         return operation

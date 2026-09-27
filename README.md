@@ -11,7 +11,10 @@ Django 5.2, PostgreSQL, DRF, SimpleJWT and drf-spectacular.
 - Workspace and board members must already have a NavaBoard account; member lookup uses their phone number.
 - Private/workspace-visible boards, board membership, ordered lists/cards and deadlines.
 - Labels, checklists/items, comments, assignees and private file attachments.
-- Paginated card search, activity history and persistent in-app notifications.
+- Workspace name search, paginated cross-workspace board/card search and in-board card filters.
+- Card search by text, assignees, labels, deadlines and related content, with quoted phrases and exclusion operators.
+- Configurable per-user read, action and search rate limits with Retry-After responses.
+- Activity history and persistent in-app notifications.
 - Current permissions and soft-deleted parents checked when reading data and notifications.
 - Swagger with endpoint-specific permissions, schemas and authentication examples.
 
